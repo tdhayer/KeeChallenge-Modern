@@ -85,7 +85,7 @@ No manual reference editing required - the project resolves `KeePass.exe` via th
 
 ## Installation
 
-KeeChallenge works with both the **installed** and **portable** versions of KeePass.
+KeeChallenge-Modern works with both the **installed** and **portable** versions of KeePass.
 
 ### Option A - Installed KeePass (system-wide)
 
@@ -134,7 +134,7 @@ KeePass\           <- extracted portable ZIP, run from here
 
 ## Using
 
-KeeChallenge uses the **HMAC-SHA1 challenge-response** functionality built into the YubiKey.
+KeeChallenge-Modern uses the **HMAC-SHA1 challenge-response** functionality built into the YubiKey.
 
 ### First-time setup
 
@@ -160,7 +160,7 @@ All state is stored in an `.xml` file alongside your `.kdbx` database file.
 
 If the `.xml` file is lost or corrupted, or if you lose your YubiKey, use **Recovery Mode**: enter your stored secret directly to regain access. You will then be prompted to reconfigure with a YubiKey.
 
-> **Security note:** KeeChallenge is not intended as the sole authentication factor. Physical possession of your YubiKey is sufficient to open the database if no master password is set. Always use KeeChallenge **together with a strong master password**.
+> **Security note:** KeeChallenge-Modern is not intended as the sole authentication factor. Physical possession of your YubiKey is sufficient to open the database if no master password is set. Always use KeeChallenge-Modern **together with a strong master password**.
 
 ---
 
