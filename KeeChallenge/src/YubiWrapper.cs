@@ -21,10 +21,10 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Windows.Forms;
 using System.Security;
 using System.Runtime.ConstrainedExecution;
 using System.IO;
+using KeePassLib.Utility;
 
 namespace KeeChallenge
 {
@@ -34,12 +34,14 @@ namespace KeeChallenge
         SLOT2 = 1
     };
 
-    public class YubiWrapper
+    public class YubiWrapper : IChallengeResponseProvider
     {
         public const uint yubiRespLen = 20;
         private const uint yubiBuffLen = 64;
 
-        private List<string> nativeDLLs =  new List<string>() { "libykpers-1-1.dll", "libyubikey-0.dll", "libjson-0.dll", "libjson-c-2.dll" };
+        public uint ResponseLength { get { return yubiRespLen; } }
+
+        private IReadOnlyList<string> nativeDLLs = new List<string>() { "libykpers-1-1.dll", "libyubikey-0.dll", "libjson-0.dll", "libjson-c-2.dll" };
 
         private static bool is64BitProcess = (IntPtr.Size == 8);
 
@@ -59,7 +61,9 @@ namespace KeeChallenge
                 string codeBase = System.Reflection.Assembly.GetExecutingAssembly().CodeBase;
                 UriBuilder uri = new UriBuilder(codeBase);
                 string path = Uri.UnescapeDataString(uri.Path);
-                return Path.GetDirectoryName(path);
+                string dir = Path.GetDirectoryName(path);
+                if (dir == null) throw new InvalidOperationException("Unable to determine assembly directory.");
+                return dir;
             }
         }
 
@@ -108,8 +112,8 @@ namespace KeeChallenge
                             }
                             catch (Exception)
                             {
-                                string warn = "Please login as an administrator and delete the following files from " + Environment.CurrentDirectory + ":\n" + string.Join("\n", nativeDLLs.ToArray());
-                                MessageBox.Show(warn);
+                                string warn = "Please login as an administrator and delete the following files from " + Environment.CurrentDirectory + ":\n" + string.Join("\n", nativeDLLs);
+                                MessageService.ShowWarning(warn);
                                 return false;
                             }
                         }
@@ -123,7 +127,7 @@ namespace KeeChallenge
                     if (!Directory.Exists(_32BitDir) || !Directory.Exists(_64BitDir))
                     {
                         string err = String.Format("Error: one of the following directories is missing:\n{0}\n{1}\nPlease reinstall KeeChallenge and ensure that these directories are present", _32BitDir, _64BitDir);
-                        MessageBox.Show(err);
+                        MessageService.ShowWarning(err);
                         return false;
                     }
                     if (!is64BitProcess) 
@@ -137,53 +141,64 @@ namespace KeeChallenge
             }
             catch (Exception e)
             {
-                Debug.Assert(false,e.Message);         
-                MessageBox.Show("Error connecting to yubikey!", "Error", MessageBoxButtons.OK);               
+                Debug.Assert(false, e.Message);
+                MessageService.ShowWarning("Error connecting to yubikey!", e.Message);
                 return false;
             }
            return true;
         }
 
-        [DllImport("libykpers-1-1.dll")]
+        [DllImport("libykpers-1-1.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern int yk_init();
 
-        [DllImport("libykpers-1-1.dll")]
+        [DllImport("libykpers-1-1.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern int yk_release();
 
-        [DllImport("libykpers-1-1.dll")]
+        [DllImport("libykpers-1-1.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern int yk_close_key(IntPtr yk);
 
-        [DllImport("libykpers-1-1.dll")]
+        [DllImport("libykpers-1-1.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern IntPtr yk_open_first_key();
 
-        [DllImport("libykpers-1-1.dll")]
+        [DllImport("libykpers-1-1.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern int yk_challenge_response(IntPtr yk, byte yk_cmd, int may_block, uint challenge_len, byte[] challenge, uint response_len, byte[] response);
                
         public bool ChallengeResponse(YubiSlot slot, byte[] challenge, out byte[] response)
         {
             response = new byte[yubiRespLen];
             if (yk == IntPtr.Zero) return false;
-            
+
             byte[] temp = new byte[yubiBuffLen];
-            int ret = yk_challenge_response(yk, slots[(int)slot], 1, (uint)challenge.Length, challenge, yubiBuffLen, temp);
-            if (ret == 1)
+            try
             {
-                Array.Copy(temp, response, response.Length);
-                return true;
+                int ret = yk_challenge_response(yk, slots[(int)slot], 1, (uint)challenge.Length, challenge, yubiBuffLen, temp);
+                if (ret == 1)
+                {
+                    Array.Copy(temp, response, response.Length);
+                    return true;
+                }
+                return false;
             }
-            else return false;
+            finally
+            {
+                Array.Clear(temp, 0, temp.Length);
+            }
         }
 
         public void Close()
         {
             if (yk != IntPtr.Zero)
             {
-                bool ret = YubiWrapper.yk_close_key(yk) == 1;
-                if (!ret || YubiWrapper.yk_release() != 1)
-                {
-                    throw new Exception("Error closing Yubikey");
-                }
+                bool closedOk = yk_close_key(yk) == 1;
+                yk = IntPtr.Zero;
+                bool releasedOk = yk_release() == 1;
+                Debug.Assert(closedOk && releasedOk, "Error closing YubiKey");
             }
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
     }
 }

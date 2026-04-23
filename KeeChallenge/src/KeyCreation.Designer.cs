@@ -57,6 +57,7 @@
             this.helpProvider1.SetShowHelp(this.secretTextBox, true);
             this.secretTextBox.Size = new System.Drawing.Size(325, 20);
             this.secretTextBox.TabIndex = 1;
+            this.secretTextBox.UseSystemPasswordChar = true;
             // 
             // OKButton
             // 

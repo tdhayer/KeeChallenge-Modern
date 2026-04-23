@@ -52,6 +52,7 @@
             this.secretTextBox.Name = "secretTextBox";
             this.secretTextBox.Size = new System.Drawing.Size(616, 31);
             this.secretTextBox.TabIndex = 1;
+            this.secretTextBox.UseSystemPasswordChar = true;
             // 
             // OKButton
             // 

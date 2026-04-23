@@ -61,12 +61,15 @@ namespace KeeChallenge.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up the yubikey bitmap from an embedded resource stream.
         /// </summary>
         internal static System.Drawing.Bitmap yubikey {
             get {
-                object obj = ResourceManager.GetObject("yubikey", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                var asm = typeof(Resources).Assembly;
+                using (var stream = asm.GetManifestResourceStream("KeeChallenge.yubikey.png"))
+                {
+                    return new System.Drawing.Bitmap(stream);
+                }
             }
         }
     }

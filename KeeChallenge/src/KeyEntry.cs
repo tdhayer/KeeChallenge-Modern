@@ -31,7 +31,7 @@ namespace KeeChallenge
         private Timer countdown;
         private byte[] m_challenge;
         private byte[] m_response;
-        private YubiWrapper yubi;
+        private IChallengeResponseProvider yubi;
         private YubiSlot yubiSlot;
         private KeeChallengeProv m_parent;
         
@@ -166,7 +166,8 @@ namespace KeeChallenge
             }
             if (yubi != null)
             {
-                yubi.Close();
+                yubi.Dispose();
+                yubi = null;
             }
             GlobalWindowManager.RemoveWindow(this);
         }

@@ -37,6 +37,7 @@ namespace KeeChallenge
         public const int keyLenBytes = 20;
         public const int challengeLenBytes = 64;
         public const int secretLenBytes = 20;
+        public const int MetadataVersion = 2;
         private bool m_LT64 = false;
 
         //If variable length challenges are enabled, a 63 byte challenge is sent instead.
@@ -116,14 +117,27 @@ namespace KeeChallenge
 
         public byte[] GenerateResponse(byte[] challenge, byte[] key)
         {
-            HMACSHA1 hmac = new HMACSHA1(key);
-
             if (LT64)
                 challenge = challenge.Take(challengeLenBytes - 1).ToArray();
 
-            byte[] resp = hmac.ComputeHash(challenge);
-            hmac.Clear();
-            return resp;
+            using (HMACSHA1 hmac = new HMACSHA1(key))
+            {
+                return hmac.ComputeHash(challenge);
+            }
+        }
+
+        private static bool FixedTimeEquals(byte[] left, byte[] right)
+        {
+            if (left == null || right == null) return false;
+            if (left.Length != right.Length) return false;
+
+            int diff = 0;
+            for (int i = 0; i < left.Length; ++i)
+            {
+                diff |= left[i] ^ right[i];
+            }
+
+            return diff == 0;
         }
 
         private bool EncryptAndSave(byte[] secret)
@@ -135,35 +149,38 @@ namespace KeeChallenge
             byte[] resp = GenerateResponse(challenge, secret);
 
             //use the response to encrypt the secret
-            SHA256 sha = SHA256Managed.Create();
-            byte[] key = sha.ComputeHash(resp); // get a 256 bit key from the 160 bit hmac response
-            byte[] secretHash = sha.ComputeHash(secret);
-
-            AesManaged aes = new AesManaged();
-            aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
-            aes.Key = key;
-            aes.GenerateIV();
-            aes.Padding = PaddingMode.PKCS7;
-            byte[] iv = aes.IV;
-
-            byte[] encrypted;
-            ICryptoTransform enc = aes.CreateEncryptor();
-            using (MemoryStream msEncrypt = new MemoryStream())
+            byte[] key;
+            byte[] secretHash;
+            byte[] iv;
+            using (SHA256 sha = SHA256.Create())
             {
-                using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, enc, CryptoStreamMode.Write))
-                {
-                    csEncrypt.Write(secret, 0, secret.Length);
-                    csEncrypt.FlushFinalBlock();
-
-                    encrypted = msEncrypt.ToArray();
-                    csEncrypt.Close();
-                    csEncrypt.Clear();
-                }
-                msEncrypt.Close();
+                key = sha.ComputeHash(resp); // get a 256 bit key from the 160 bit hmac response
+                secretHash = sha.ComputeHash(secret);
             }
 
-            sha.Clear();
-            aes.Clear();
+            byte[] encrypted;
+            using (Aes aes = Aes.Create())
+            {
+                aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
+                aes.Key = key;
+                aes.GenerateIV();
+                aes.Padding = PaddingMode.PKCS7;
+                iv = aes.IV;
+
+                using (ICryptoTransform enc = aes.CreateEncryptor())
+                {
+                    using (MemoryStream msEncrypt = new MemoryStream())
+                    {
+                        using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, enc, CryptoStreamMode.Write))
+                        {
+                            csEncrypt.Write(secret, 0, secret.Length);
+                            csEncrypt.FlushFinalBlock();
+
+                            encrypted = msEncrypt.ToArray();
+                        }
+                    }
+                }
+            }
 
             Stream s = null;
             try
@@ -181,6 +198,8 @@ namespace KeeChallenge
                 XmlWriter xml = XmlWriter.Create(s, settings);
                 xml.WriteStartDocument();
                 xml.WriteStartElement("data");
+
+                xml.WriteElementString("version", MetadataVersion.ToString());
 
                 xml.WriteStartElement("aes");
                 xml.WriteElementString("encrypted", Convert.ToBase64String(encrypted));
@@ -203,8 +222,9 @@ namespace KeeChallenge
                 return false;
             }    
             finally
-            {                
-                s.Close();
+            {
+                if (s != null)
+                    s.Close();
             }
 
             return true;
@@ -213,42 +233,53 @@ namespace KeeChallenge
         private static bool DecryptSecret(byte[] encryptedSecret, byte[] yubiResp, byte[] iv, byte[] verification, out byte[] secret)
         {
             //use the response to decrypt the secret
-            SHA256 sha = SHA256Managed.Create();
-            byte[] key = sha.ComputeHash(yubiResp); // get a 256 bit key from the 160 bit hmac response
-
-            AesManaged aes = new AesManaged();
-            aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
-            aes.Key = key;
-            aes.IV = iv;
-            aes.Padding = PaddingMode.PKCS7;
+            byte[] key;
+            using (SHA256 sha = SHA256.Create())
+            {
+                key = sha.ComputeHash(yubiResp); // get a 256 bit key from the 160 bit hmac response
+            }
 
             secret = new byte[keyLenBytes];
-            ICryptoTransform dec = aes.CreateDecryptor();
-            using (MemoryStream msDecrypt = new MemoryStream(encryptedSecret))
+            try
             {
-                using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, dec, CryptoStreamMode.Read))
+                using (Aes aes = Aes.Create())
                 {
-                    csDecrypt.Read(secret, 0, secret.Length);
-                    csDecrypt.Close();
-                    csDecrypt.Clear();
+                    aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
+                    aes.Key = key;
+                    aes.IV = iv;
+                    aes.Padding = PaddingMode.PKCS7;
+
+                    using (ICryptoTransform dec = aes.CreateDecryptor())
+                    {
+                        using (MemoryStream msDecrypt = new MemoryStream(encryptedSecret))
+                        {
+                            using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, dec, CryptoStreamMode.Read))
+                            {
+                                csDecrypt.Read(secret, 0, secret.Length);
+                            }
+                        }
+                    }
                 }
-                msDecrypt.Close();
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                // Corrupt ciphertext (e.g. bad padding) — treat as wrong key / corrupt data
+                Array.Clear(secret, 0, secret.Length);
+                return false;
             }
 
-            byte[] secretHash = sha.ComputeHash(secret);
-            for (int i = 0; i < secretHash.Length; i++)
+            byte[] secretHash;
+            using (SHA256 sha = SHA256.Create())
             {
-                if (secretHash[i] != verification[i])
-                {
-                    MessageService.ShowWarning("Incorrect response!");
-                    Array.Clear(secret, 0, secret.Length);
-                    return false;
-                }
+                secretHash = sha.ComputeHash(secret);
             }
 
-            //return the secret
-            sha.Clear();
-            aes.Clear();
+            if (!FixedTimeEquals(secretHash, verification))
+            {
+                Array.Clear(secret, 0, secret.Length);
+                return false;
+            }
+
             return true;
         }
        
@@ -279,6 +310,9 @@ namespace KeeChallenge
                     {
                         switch (xml.Name)
                         {
+                            case "version":
+                                xml.Read(); // consume value; reserved for future behavioral changes
+                                break;
                             case "encrypted":
                                 xml.Read();
                                 encryptedSecret = Convert.FromBase64String(xml.Value.Trim());
@@ -315,6 +349,21 @@ namespace KeeChallenge
                     xml.Close();
                 if (s != null)
                     s.Close();
+            }
+
+            int expectedChallengeLength = LT64 ? challengeLenBytes - 1 : challengeLenBytes;
+            bool challengeLengthValid = (challenge != null) &&
+                (challenge.Length == expectedChallengeLength || challenge.Length == challengeLenBytes);
+            bool metadataValid =
+                (encryptedSecret != null && encryptedSecret.Length > 0) &&
+                (iv != null && iv.Length == 16) &&
+                challengeLengthValid &&
+                (verification != null && verification.Length == 32);
+
+            if (!metadataValid)
+            {
+                MessageService.ShowWarning(String.Format("Error: file {0} could not be read correctly. Is the file corrupt? Reverting to recovery mode", mInfo.Path));
+                return false;
             }
 
             //if failed, return false
@@ -386,6 +435,7 @@ namespace KeeChallenge
             }
             else
             {
+                MessageService.ShowWarning("Incorrect response from YubiKey.");
                 return null;
             }
         }

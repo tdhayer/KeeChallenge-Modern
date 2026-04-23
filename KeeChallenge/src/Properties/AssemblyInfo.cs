@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("KeeChallenge")]
-[assembly: AssemblyDescription("Key provider based on challenge-response")]
+[assembly: AssemblyDescription("YubiKey challenge-response key provider for KeePass 2.x")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ben Rush")]
 [assembly: AssemblyProduct("KeePass Plugin")]
-[assembly: AssemblyCopyright("Copyright © 2014 Ben Rush")]
+[assembly: AssemblyCopyright("Copyright © 2014-2026 Ben Rush")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,6 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.5")]
-//[assembly: AssemblyFileVersion("1.1.*")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]
+[assembly: AssemblyInformationalVersion("2.0.0")]

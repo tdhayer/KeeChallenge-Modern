@@ -50,15 +50,16 @@ namespace KeeChallenge
                 m_parent.LT64 = LT64_cb.Checked;
 
                 Secret = new byte[KeeChallengeProv.secretLenBytes];
-                secretTextBox.Text = secretTextBox.Text.Replace(" ", string.Empty); //remove spaces
+                string normalizedSecret = secretTextBox.Text.Replace(" ", string.Empty); //remove spaces
                
-                if (secretTextBox.Text.Length == KeeChallengeProv.secretLenBytes * 2)
+                if (normalizedSecret.Length == KeeChallengeProv.secretLenBytes * 2)
                 {
-                    for (int i = 0; i < secretTextBox.Text.Length; i += 2)
+                    for (int i = 0; i < normalizedSecret.Length; i += 2)
                     {
-                        string b = secretTextBox.Text.Substring(i, 2);
+                        string b = normalizedSecret.Substring(i, 2);
                         Secret[i / 2] = Convert.ToByte(b,16);
                     }
+                    secretTextBox.Text = string.Empty;
                 }
                 else
                 {

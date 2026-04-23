@@ -69,3 +69,5 @@ $RECYCLE.BIN/
 *.exe
 *.dll
 *.plgx
+# Ignore .secret-stack folder
+.secret-stack
