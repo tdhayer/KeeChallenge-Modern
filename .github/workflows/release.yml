@@ -28,7 +28,7 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}"
-          $zipName = "KeeChallenge-${version}.zip"
+          $zipName = "KeeChallenge-Modern-${version}.zip"
           Compress-Archive -Path @(
             "KeeChallenge/src/bin/Release/net48/KeeChallenge.dll",
             "KeeChallenge/lib/32bit",

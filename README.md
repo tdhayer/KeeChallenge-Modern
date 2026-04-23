@@ -1,4 +1,4 @@
-﻿[KeeChallenge v2.0](https://github.com/tdhayer/keechallenge/ "KeeChallenge Documentation")
+﻿[KeeChallenge-Modern v2.0](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
