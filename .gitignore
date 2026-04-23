@@ -72,3 +72,4 @@ $RECYCLE.BIN/
 # Ignore .secret-stack folder
 .secret-stack
 MODERNIZATION_PLAN.md
+ROADMAP.md
