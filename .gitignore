@@ -71,3 +71,4 @@ $RECYCLE.BIN/
 *.plgx
 # Ignore .secret-stack folder
 .secret-stack
+MODERNIZATION_PLAN.md

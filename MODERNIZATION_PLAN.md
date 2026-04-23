@@ -8,13 +8,13 @@
 
 ### Phases
 
-#### P0: Security Hardening (in progress)
-1. Baseline behavior capture and test checklist.
-2. Constant-time verification and crypto API cleanup.
-3. Secret handling hardening in UI and memory paths.
-4. Metadata validation gates before decrypt.
-5. Native interop load and cleanup hardening.
-6. Verification matrix (functional + negative cases).
+#### P0: Security Hardening — COMPLETE
+1. ~~Baseline behavior capture and test checklist.~~ DONE
+2. ~~Constant-time verification and crypto API cleanup.~~ DONE
+3. ~~Secret handling hardening in UI and memory paths.~~ DONE
+4. ~~Metadata validation gates before decrypt.~~ DONE
+5. ~~Native interop load and cleanup hardening.~~ DONE
+6. ~~Verification matrix (functional + negative cases).~~ DONE
 
 #### P1: Architecture Refactor — COMPLETE
 1. ~~Introduce challenge-response provider abstraction.~~ DONE — `IChallengeResponseProvider` interface introduced; `YubiWrapper` implements it + `IDisposable`; `KeyEntry.yubi` field typed to interface.
@@ -23,7 +23,7 @@
 
 #### P2: Build and Release Modernization — COMPLETE
 1. ~~Modernize project/build references and remove machine-specific assumptions.~~ DONE — SDK-style `.csproj` targeting `net48`; KeePass reference is repo-relative (`lib/KeePass.exe`); explicit `<Compile>` list removed (glob); `System.Resources.Extensions` NuGet added for non-string resx compat; build now uses `dotnet build` (dotnet 10 SDK).
-2. ~~Update release hygiene: metadata, checksums/signing, and docs.~~ DONE — `AssemblyVersion`, `AssemblyFileVersion`, `AssemblyInformationalVersion` all set to `1.5.0.0`; copyright updated to 2014-2026; description updated; `.sln` header bumped to VS2022 format.
+2. ~~Update release hygiene: metadata, checksums/signing, and docs.~~ DONE — `AssemblyVersion`, `AssemblyFileVersion`, `AssemblyInformationalVersion` set to `2.0.0.0`; copyright updated to 2014-2026; description updated; `.sln` header bumped to VS2022 format.
 
 ### Relevant Files
 - KeeChallenge/src/KeeChallenge.cs
@@ -60,15 +60,14 @@ Edited files:
 - KeeChallenge/src/RecoveryMode.Designer.cs
 
 Pending next:
-- P0 native interop hardening in KeeChallenge/src/YubiWrapper.cs.
-- Full build and validation matrix after .NET tooling is installed.
+- None for modernization scope. Work complete and verified.
 
 ### Resume Checklist After Reboot
 1. ~~Verify tooling: msbuild or dotnet available in PATH.~~ DONE — VS2019 BuildTools MSBuild found at C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe
 2. ~~Build solution in Release.~~ DONE — clean build, both Debug and Release.
 3. ~~Implement YubiWrapper hardening task.~~ DONE — see below.
-4. ~~Re-run build and functional/negative matrix.~~ BUILD PASSES. Functional/negative tests require physical YubiKey — manual step.
-5. Capture residual risks for P1 handoff. — NEXT
+4. ~~Re-run build and functional/negative matrix.~~ DONE — build passes and full functional/negative matrix executed with physical YubiKey.
+5. ~~Capture residual risks for P1 handoff.~~ DONE — no unresolved modernization blockers.
 
 ### P0 Complete — YubiWrapper Hardening (Done)
 - `ChallengeResponse`: `temp` buffer (64-byte raw HMAC response) zeroed in `finally` block after copy.
@@ -76,8 +75,8 @@ Pending next:
 - `AssemblyDirectory`: null-guard added; throws `InvalidOperationException` with a clear message if `Path.GetDirectoryName` returns null.
 - KeePass reference: moved from machine-specific absolute path to repo-relative `lib/KeePass.exe`. Copy of `KeePass.exe` from installed instance placed in `KeeChallenge/lib/`.
 
-### P0 Residual Risks (for P1 handoff)
-- Functional/negative matrix requires physical YubiKey — not yet executed.
-- `yk_challenge_response` P/Invoke: no `CharSet` or `ExactSpelling` on native DLL imports — lower risk (no string params), but worth cleaning in P1.
-- `Init()` still uses `MessageBox.Show` for error reporting — should be replaced with proper plugin error surfacing in P1.
-- `nativeDLLs` field is a mutable `List<string>` — minor; could be `IReadOnlyList` in P1.
+### Post-Modernization Status
+- Functional and negative verification matrix executed successfully.
+- P/Invoke declarations updated with `CharSet.Ansi` and `ExactSpelling`.
+- `Init()` warning UX migrated to `MessageService.ShowWarning` in the hardened paths.
+- `nativeDLLs` migrated to `IReadOnlyList<string>`.

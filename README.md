@@ -1,6 +1,11 @@
-﻿[KeeChallenge v2.0](http://brush701.github.io/keechallenge/ "KeeChallenge Documentation")
+﻿[KeeChallenge v2.0](https://github.com/tdhayer/keechallenge/ "KeeChallenge Documentation")
 =================
-Copyright 2014-2026 Ben Rush
+
+## Fork Lineage
+- This repository is an independently maintained fork of the original KeeChallenge project.
+- Upstream/original repository: https://github.com/brush701/keechallenge
+- Full credit to the original authors and contributors is preserved in source headers, license, and project history.
+- This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
 v2.0
