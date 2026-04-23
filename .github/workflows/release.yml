@@ -18,14 +18,6 @@ jobs:
         with:
           dotnet-version: '8.x'   # SDK used to build net48 targets
 
-      - name: Download KeePass reference assembly
-        shell: pwsh
-        run: |
-          $url = "https://sourceforge.net/projects/keepass/files/KeePass%202.x/2.61/KeePass-2.61.zip/download"
-          Invoke-WebRequest -Uri $url -OutFile KeePass.zip
-          Expand-Archive KeePass.zip -DestinationPath KeePass-extracted
-          Copy-Item "KeePass-extracted/KeePass.exe" "KeeChallenge/lib/KeePass.exe"
-
       - name: Build
         run: dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release /nologo /clp:ErrorsOnly
 
