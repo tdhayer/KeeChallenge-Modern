@@ -19,6 +19,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Security;
@@ -101,21 +102,21 @@ namespace KeeChallenge
             { 
                 if (!IsLinux) //no DLL Hell on Linux!
                 {     
-                    foreach (string s in nativeDLLs) //support upgrading from installs of versions 1.0.2 and prior
+                    // Legacy cleanup (v1.0.2 and prior placed DLLs directly in cwd).
+                    // We no longer delete automatically; warn the user instead to avoid
+                    // destructive side-effects in locked-down or shared KeePass installs.
                     {
-                        string path = Path.Combine(Environment.CurrentDirectory, s);
-                        if (File.Exists(path)) //prompt the user to do it to avoid permissions issues
+                        var legacyFiles = nativeDLLs
+                            .Select(s => Path.Combine(Environment.CurrentDirectory, s))
+                            .Where(File.Exists)
+                            .ToList();
+                        if (legacyFiles.Count > 0)
                         {
-                            try
-                            {
-                                File.Delete(path);
-                            }
-                            catch (Exception)
-                            {
-                                string warn = "Please login as an administrator and delete the following files from " + Environment.CurrentDirectory + ":\n" + string.Join("\n", nativeDLLs);
-                                MessageService.ShowWarning(warn);
-                                return false;
-                            }
+                            string warn = "KeeChallenge-Modern: legacy DLL files were found in the KeePass directory.\n" +
+                                "Please delete them manually to avoid conflicts:\n" +
+                                string.Join("\n", legacyFiles);
+                            MessageService.ShowWarning(warn);
+                            return false;
                         }
                     }
 

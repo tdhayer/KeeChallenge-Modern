@@ -405,7 +405,8 @@ namespace KeeChallenge
             if (!ReadEncryptedSecret(out encryptedSecret, out challenge, out iv, out verification))
             {
                 secret = RecoveryMode();
-                EncryptAndSave(secret);
+                if (secret == null) return null;
+                if (!EncryptAndSave(secret)) return null;
                 return secret;
             }
                 //show the dialog box prompting user to press yubikey button
@@ -417,7 +418,8 @@ namespace KeeChallenge
                 if (entryForm.RecoveryMode)
                 {
                     secret = RecoveryMode();
-                    EncryptAndSave(secret);
+                    if (secret == null) return null;
+                    if (!EncryptAndSave(secret)) return null;
                     return secret;
                 }
 
