@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'   # SDK used to build net48 targets
+
+      - name: Build
+        run: dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release /nologo /clp:ErrorsOnly
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $zipName = "KeeChallenge-${version}.zip"
+          Compress-Archive -Path @(
+            "KeeChallenge/src/bin/Release/net48/KeeChallenge.dll",
+            "KeeChallenge/lib/32bit",
+            "KeeChallenge/lib/64bit"
+          ) -DestinationPath $zipName
+          echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: false
+          body_path: ''   # leave blank to paste notes manually, or point to a file
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
