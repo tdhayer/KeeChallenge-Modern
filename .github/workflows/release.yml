@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4
         with:
           dotnet-version: '8.x'   # SDK used to build net48 targets
 
@@ -36,10 +36,20 @@ jobs:
           ) -DestinationPath $zipName
           echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
 
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash $env:ZIP_NAME -Algorithm SHA256).Hash.ToLower()
+          $checksumFile = "$env:ZIP_NAME.sha256"
+          "$hash  $env:ZIP_NAME" | Set-Content -Encoding utf8NoBOM $checksumFile
+          echo "CHECKSUM_FILE=$checksumFile" >> $env:GITHUB_ENV
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
-          files: ${{ env.ZIP_NAME }}
+          files: |
+            ${{ env.ZIP_NAME }}
+            ${{ env.CHECKSUM_FILE }}
           generate_release_notes: false
           body_path: ''   # leave blank to paste notes manually, or point to a file
         env:
