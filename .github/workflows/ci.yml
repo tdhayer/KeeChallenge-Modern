@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+    tags-ignore: [ "v*" ]   # release.yml handles tag pushes
+  pull_request:
+    branches: [ "**" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Restore
+        run: dotnet restore KeeChallenge/src/KeeChallenge.csproj
+
+      - name: Build
+        run: dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release /nologo /clp:ErrorsOnly
+
+      - name: Verify output artifact exists
+        shell: pwsh
+        run: |
+          $dll = "KeeChallenge/src/bin/Release/net48/KeeChallenge.dll"
+          if (-not (Test-Path $dll)) {
+            Write-Error "Expected artifact not found: $dll"
+            exit 1
+          }
+          Write-Host "Artifact verified: $dll"

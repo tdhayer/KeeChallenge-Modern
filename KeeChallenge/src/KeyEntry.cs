@@ -23,6 +23,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 
 using KeePass.UI;
+using KeePassLib.Utility;
 
 namespace KeeChallenge
 {
@@ -87,7 +88,7 @@ namespace KeeChallenge
             if (Challenge == null) return;
             success = yubi.ChallengeResponse(yubiSlot, Challenge, out m_response);
             if (!success)
-                MessageBox.Show("Error getting response from Yubikey", "Error");           
+                MessageService.ShowWarning("Error getting response from YubiKey.");
 
             return;
         }
@@ -142,7 +143,7 @@ namespace KeeChallenge
             catch (PlatformNotSupportedException err)
             {
                 Debug.Assert(false);
-                MessageBox.Show(err.Message, "Error", MessageBoxButtons.OK);
+                MessageService.ShowWarning(err.Message);
                 return;
             }
             //spawn background countdown timer

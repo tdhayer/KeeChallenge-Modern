@@ -21,6 +21,7 @@ using System.Drawing;
 using System.Windows.Forms;
 
 using KeePass.UI;
+using KeePassLib.Utility;
 
 namespace KeeChallenge
 {
@@ -64,7 +65,7 @@ namespace KeeChallenge
                 else
                 {
                     //invalid key
-                    MessageBox.Show("Error: secret must be 20 bytes long");
+                    MessageService.ShowWarning("Error: secret must be 20 bytes long.");
                     e.Cancel = true;
                     return;
                 }

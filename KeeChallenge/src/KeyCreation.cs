@@ -21,6 +21,7 @@ using System.Drawing;
 using System.Windows.Forms;
 
 using KeePass.UI;
+using KeePassLib.Utility;
 
 namespace KeeChallenge
 {
@@ -92,7 +93,7 @@ namespace KeeChallenge
                 else
                 {
                     //invalid key
-                    MessageBox.Show("Error: secret must be 20 bytes long");
+                    MessageService.ShowWarning("Error: secret must be 20 bytes long.");
                     e.Cancel = true;
                     return;
                 }
@@ -103,7 +104,7 @@ namespace KeeChallenge
                 
                 if ( validate.ShowDialog(this) != DialogResult.OK)
                 {
-                    MessageBox.Show("Unable to get response from yubikey");
+                    MessageService.ShowWarning("Unable to get response from YubiKey.");
                     e.Cancel = true;
                     Array.Clear(Secret, 0, Secret.Length);
                     return;
@@ -124,7 +125,7 @@ namespace KeeChallenge
                         DialogResult switchMode = MessageBox.Show(
                             "The entered secret matches your YubiKey when Variable Length Challenge is " + modeText + ".\n\n" +
                             "Would you like to switch this setting now?",
-                            "KeeChallenge",
+                            "KeeChallenge-Modern",
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Question);
 
@@ -136,11 +137,11 @@ namespace KeeChallenge
                             return;
                         }
 
-                        MessageBox.Show("Error: secret does not match yubikey with the current challenge mode.");
+                        MessageService.ShowWarning("Error: secret does not match YubiKey with the current challenge mode.");
                     }
                     else
                     {
-                        MessageBox.Show("Error: secret does not match yubikey");
+                        MessageService.ShowWarning("Error: secret does not match YubiKey.");
                     }
 
                     e.Cancel = true;
