@@ -63,6 +63,8 @@ Linux/macOS support existed in earlier releases via Mono and a `KeeChallenge.dll
 - **Yubico native libraries** - the prebuilt `32bit/` and `64bit/` DLL bundles from https://opensource.yubico.com/yubikey-personalization/releases.html. The plugin ships with or alongside these folders.
 - **.NET Framework 4.8** - included in Windows 10 1903+ and Windows 11. Available from https://dotnet.microsoft.com/download/dotnet-framework/net48 for older systems.
 
+For bundled third-party component provenance and notice guidance, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ---
 
 ## Building from Source
