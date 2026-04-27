@@ -1,4 +1,4 @@
-﻿[KeeChallenge-Modern v2.0](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.2](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
@@ -8,6 +8,11 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
+v2.0.2
+* Privacy hardening for public release: rewritten commit identity to GitHub noreply address.
+* Compliance/docs update: added `THIRD_PARTY_NOTICES.md` and linked it from dependencies.
+* Release metadata sync: project `VERSION` and assembly version fields aligned to 2.0.2.
+
 v2.0
 * Security hardening: constant-time secret verification, AES/SHA factory API modernization, metadata validation gates, masked secret input in all dialogs, native interop buffer zeroing and handle safety.
 * Architecture: `IChallengeResponseProvider` abstraction introduced; `YubiWrapper` implements it + `IDisposable`.
