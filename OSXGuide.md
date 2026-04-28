@@ -1,3 +1,8 @@
+## Legacy Notice
+This document is retained for historical reference only.
+macOS/Mono support is legacy and unsupported in current KeeChallenge-Modern releases.
+Do not rely on this guide for current setup instructions.
+
 ## About
 `Author: Markku Roponen`
 Purpose of this guide is to help you to get KeePass 2 KeeChallenge plugin to work on Mac OS X Mavericks (10.9.x). This guide most likely helps also users with other OS X versions as well.
@@ -52,7 +57,7 @@ cd Yubico/
 ### Building libyubikey (yubico-c)
 `Libykpers` is depends on `libyubikey` and thereof we need to build it first, we are building universal build so that it will work in both 32-bit and 64-bit environments.
 ```bash
-cd ~/worspace/Yubikey/
+cd ~/workspace/Yubikey/
 git clone https://github.com/Yubico/yubico-c.git
 cd yubico-c/
 autoreconf --install

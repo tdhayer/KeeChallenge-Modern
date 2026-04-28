@@ -34,6 +34,6 @@ You should receive an acknowledgement within **7 days**. If you do not, feel fre
 
 KeeChallenge-Modern is a KeePass plugin that bridges KeePass to HMAC-SHA1 YubiKey challenge-response.
 
-- The plugin stores an **encrypted** copy of the TOTP secret inside the KeePass database (AES-256-CBC, key derived from the YubiKey response). The secret is never written to disk in plaintext.
+- The plugin stores an **encrypted** copy of the challenge-response secret inside the KeePass database (AES-256-CBC, key derived from the YubiKey response). The secret is never written to disk in plaintext.
 - Responses from the YubiKey are compared using a **constant-time** equality check (`FixedTimeEquals`) to resist timing attacks.
 - The plugin does not phone home except for version-update checks against `https://github.com/tdhayer/KeeChallenge-Modern/raw/main/VERSION` (plain text, no executable download).

@@ -32,7 +32,10 @@ jobs:
           Compress-Archive -Path @(
             "KeeChallenge/src/bin/Release/net48/KeeChallenge.dll",
             "KeeChallenge/lib/32bit",
-            "KeeChallenge/lib/64bit"
+            "KeeChallenge/lib/64bit",
+            "LICENSE",
+            "THIRD_PARTY_NOTICES.md",
+            "THIRD_PARTY_LICENSES.md"
           ) -DestinationPath $zipName
           echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
 

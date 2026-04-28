@@ -1,6 +1,7 @@
 # Third-Party Notices
 
 This repository and its release artifacts include third-party software components.
+See `THIRD_PARTY_LICENSES.md` for explicit attribution and licensing references tied to bundled components.
 
 ## Included Third-Party Components
 
@@ -15,7 +16,7 @@ This repository and its release artifacts include third-party software component
 
 Licensing and notices:
 - KeePass is distributed by its upstream author under its own license terms.
-- See the KeePass upstream site and distribution package for the authoritative license text and notices.
+- Attribution details and license references for the bundled copy are recorded in `THIRD_PARTY_LICENSES.md`.
 
 ### 2) Yubico Native Challenge-Response Libraries
 
@@ -36,6 +37,7 @@ Licensing and notices:
 Licensing and notices:
 - These binaries are distributed under their respective upstream licenses.
 - License obligations and copyright attributions are governed by the upstream release package and source repositories.
+- Attribution details and license references for bundled Yubico binaries are recorded in `THIRD_PARTY_LICENSES.md`.
 - When updating these binaries, maintainers must review and carry forward all required third-party notices.
 
 ## Maintainer Update Checklist

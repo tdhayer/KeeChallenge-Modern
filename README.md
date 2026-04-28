@@ -1,4 +1,4 @@
-﻿[KeeChallenge-Modern v2.0.2](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.3](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
@@ -8,6 +8,13 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
+v2.0.3
+* Release readiness pass: standardized source license headers to GPLv3 wording to match repository licensing.
+* Platform support clarity: `OSXGuide.md` marked legacy/unsupported and linked as historical-only guidance.
+* Compliance hardening: added `THIRD_PARTY_LICENSES.md` and ensured release ZIP includes license/notice documents.
+* Security/docs correction: replaced inaccurate "TOTP secret" wording with challenge-response secret terminology.
+* Build docs sync: aligned .NET SDK prerequisite guidance to 8.0+.
+
 v2.0.2
 * Privacy hardening for public release: rewritten commit identity to GitHub noreply address.
 * Compliance/docs update: added `THIRD_PARTY_NOTICES.md` and linked it from dependencies.
@@ -59,6 +66,7 @@ v1.0.1
 Windows only (this pass). The native Yubico libraries (`libykpers-1-1.dll` and friends) are Windows DLLs; the plugin selects the correct 32-bit or 64-bit version automatically at runtime.
 
 Linux/macOS support existed in earlier releases via Mono and a `KeeChallenge.dll.config` dllmap. That path has not been maintained in v2.0 and is not tested.
+`OSXGuide.md` is retained only as historical reference and is legacy/unsupported for current releases.
 
 ---
 
@@ -68,14 +76,14 @@ Linux/macOS support existed in earlier releases via Mono and a `KeeChallenge.dll
 - **Yubico native libraries** - the prebuilt `32bit/` and `64bit/` DLL bundles from https://opensource.yubico.com/yubikey-personalization/releases.html. The plugin ships with or alongside these folders.
 - **.NET Framework 4.8** - included in Windows 10 1903+ and Windows 11. Available from https://dotnet.microsoft.com/download/dotnet-framework/net48 for older systems.
 
-For bundled third-party component provenance and notice guidance, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+For bundled third-party component provenance and notice guidance, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ---
 
 ## Building from Source
 
 ### Prerequisites
-- [.NET SDK](https://dotnet.microsoft.com/download) (6.0 or later; tested with 10.0)
+- [.NET SDK](https://dotnet.microsoft.com/download) (8.0 or later; tested with 10.0)
 - A copy of `KeePass.exe` placed at `KeeChallenge/lib/KeePass.exe` (copy from your KeePass install or portable ZIP)
 
 ### Build

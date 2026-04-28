@@ -39,6 +39,7 @@ dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release
 The output DLL lands at `KeeChallenge/src/bin/Release/net48/KeeChallenge.dll`.
 
 The `KeePass.exe` reference is committed at `KeeChallenge/lib/KeePass.exe`. If your copy of KeePass differs in version, replace it and commit with `git add -f`.
+If you update any bundled third-party binaries, also update `THIRD_PARTY_NOTICES.md` and `THIRD_PARTY_LICENSES.md` in the same change.
 
 ---
 
