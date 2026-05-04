@@ -35,7 +35,7 @@ namespace KeeChallenge
 
         public override String UpdateUrl
         {
-            get { return "https://github.com/tdhayer/KeeChallenge-Modern/raw/main/VERSION"; }
+            get { return "https://raw.githubusercontent.com/tdhayer/KeeChallenge-Modern/master/VERSION"; }
         }
 
         public IPluginHost Host

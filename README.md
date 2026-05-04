@@ -1,4 +1,4 @@
-﻿[KeeChallenge-Modern v2.0.3](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.4](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
@@ -8,6 +8,11 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
+v2.0.4
+* Plugin update-check fix: corrected `UpdateUrl` endpoint to a valid raw GitHub URL.
+* Plugin version feed fix: aligned `VERSION` component name with plugin `AssemblyTitle` (`KeeChallenge`) for proper matching.
+* Release metadata sync: bumped `VERSION` and assembly version fields to 2.0.4.
+
 v2.0.3
 * Release readiness pass: standardized source license headers to GPLv3 wording to match repository licensing.
 * Platform support clarity: `OSXGuide.md` marked legacy/unsupported and linked as historical-only guidance.
