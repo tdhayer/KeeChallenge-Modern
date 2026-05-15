@@ -38,6 +38,9 @@ namespace KeeChallenge
         public const int challengeLenBytes = 64;
         public const int secretLenBytes = 20;
         public const int MetadataVersion = 2;
+        private const long MaxMetadataFileBytes = 64 * 1024;
+        private const long MaxMetadataXmlChars = 64 * 1024;
+        private const int MaxEncryptedSecretBytes = 256;
         private bool m_LT64 = false;
 
         //If variable length challenges are enabled, a 63 byte challenge is sent instead.
@@ -298,10 +301,19 @@ namespace KeeChallenge
             {
                 s = IOConnection.OpenRead(mInfo);
 
+                if (s.CanSeek && s.Length > MaxMetadataFileBytes)
+                {
+                    throw new InvalidDataException("Metadata file exceeds maximum allowed size.");
+                }
+
                 //read file
 
                 XmlReaderSettings settings = new XmlReaderSettings();
                 settings.CloseInput = true;
+                settings.DtdProcessing = DtdProcessing.Prohibit;
+                settings.XmlResolver = null;
+                settings.MaxCharactersInDocument = MaxMetadataXmlChars;
+                settings.MaxCharactersFromEntities = 0;
                 xml = XmlReader.Create(s, settings);
                 
                 while (xml.Read())
@@ -355,7 +367,7 @@ namespace KeeChallenge
             bool challengeLengthValid = (challenge != null) &&
                 (challenge.Length == expectedChallengeLength || challenge.Length == challengeLenBytes);
             bool metadataValid =
-                (encryptedSecret != null && encryptedSecret.Length > 0) &&
+                (encryptedSecret != null && encryptedSecret.Length > 0 && encryptedSecret.Length <= MaxEncryptedSecretBytes) &&
                 (iv != null && iv.Length == 16) &&
                 challengeLengthValid &&
                 (verification != null && verification.Length == 32);
