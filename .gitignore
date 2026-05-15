@@ -76,3 +76,12 @@ MODERNIZATION_PLAN.md
 ROADMAP.md
 future-roadmap.md
 security-hardening-roadmap.md
+
+# Local manual validation sandbox artifacts
+test-sandbox/
+
+# Local editor/workstation config
+.vscode/
+
+# Local validation run snapshots
+docs/p0-validation-results-*.md
