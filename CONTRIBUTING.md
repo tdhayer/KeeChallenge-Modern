@@ -64,7 +64,7 @@ If you update any bundled third-party binaries, also update `THIRD_PARTY_NOTICES
 
 1. Create a feature branch: `git checkout -b fix/my-issue`
 2. Make your changes and confirm the build is clean: `dotnet build ... -c Release /nologo /clp:ErrorsOnly`
-3. Push and open a Pull Request against `main`
+3. Push and open a Pull Request against `master`
 4. CI will run automatically and must pass before merge
 
 Security checks that run on PRs:

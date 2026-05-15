@@ -1,4 +1,4 @@
-﻿[KeeChallenge-Modern v2.0.4](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.5](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
@@ -8,6 +8,11 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
+v2.0.5
+* P0 hardening completed: native DLL loading trust boundary strengthened with bundled-library integrity validation and safer directory loading APIs.
+* Metadata parser hardening: explicit DTD prohibition, resolver disabled, document-size limits, and stricter encrypted payload validation.
+* Validation and release hygiene: full post-P0 integration/recovery regression matrix completed and local test sandbox artifacts excluded from source control.
+
 v2.0.4
 * Plugin update-check fix: corrected `UpdateUrl` endpoint to a valid raw GitHub URL.
 * Plugin version feed fix: aligned `VERSION` component name with plugin `AssemblyTitle` (`KeeChallenge`) for proper matching.
