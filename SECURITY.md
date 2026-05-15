@@ -37,3 +37,16 @@ KeeChallenge-Modern is a KeePass plugin that bridges KeePass to HMAC-SHA1 YubiKe
 - The plugin stores an **encrypted** copy of the challenge-response secret inside the KeePass database (AES-256-CBC, key derived from the YubiKey response). The secret is never written to disk in plaintext.
 - Responses from the YubiKey are compared using a **constant-time** equality check (`FixedTimeEquals`) to resist timing attacks.
 - The plugin does not phone home except for version-update checks against `https://raw.githubusercontent.com/tdhayer/KeeChallenge-Modern/master/VERSION` (plain text, no executable download).
+
+## Automated Security Checks
+
+This repository uses GitHub-native security automation in CI:
+
+- `CodeQL` code scanning for C# on pushes/PRs and a weekly schedule.
+- `Dependency Review` on pull requests to catch vulnerable package deltas.
+- `Dependabot` updates for NuGet dependencies and GitHub Actions.
+
+Repository settings status (manual, in GitHub UI):
+
+- **Secret scanning** and **push protection** are enabled.
+- Branch protection requires `CodeQL` and `Dependency Review` checks.
