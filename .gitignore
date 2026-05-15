@@ -69,7 +69,10 @@ $RECYCLE.BIN/
 *.exe
 *.dll
 *.plgx
+*.lscache
 # Ignore .secret-stack folder
 .secret-stack
 MODERNIZATION_PLAN.md
 ROADMAP.md
+future-roadmap.md
+security-hardening-roadmap.md

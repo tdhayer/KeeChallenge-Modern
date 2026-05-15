@@ -67,6 +67,11 @@ If you update any bundled third-party binaries, also update `THIRD_PARTY_NOTICES
 3. Push and open a Pull Request against `main`
 4. CI will run automatically and must pass before merge
 
+Security checks that run on PRs:
+
+- `CodeQL` static analysis (GitHub Code Scanning Default Setup).
+- `Dependency Review` for vulnerable dependency changes.
+
 **Commit message format:** `type(scope): short description`  
 Examples: `fix(yubikey): handle null response gracefully`, `feat(ci): add test project`
 
