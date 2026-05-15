@@ -42,9 +42,11 @@ KeeChallenge-Modern is a KeePass plugin that bridges KeePass to HMAC-SHA1 YubiKe
 
 This repository uses GitHub-native security automation in CI:
 
-- `CodeQL` code scanning for C# on pushes/PRs and a weekly schedule.
+- `CodeQL` code scanning via GitHub Code Scanning Default Setup.
 - `Dependency Review` on pull requests to catch vulnerable package deltas.
 - `Dependabot` updates for NuGet dependencies and GitHub Actions.
+
+Note: Keep CodeQL on Default Setup unless intentionally migrating to Advanced Setup. Running both at once causes SARIF upload conflicts.
 
 Repository settings status (manual, in GitHub UI):
 

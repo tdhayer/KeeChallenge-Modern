@@ -69,7 +69,7 @@ If you update any bundled third-party binaries, also update `THIRD_PARTY_NOTICES
 
 Security checks that run on PRs:
 
-- `CodeQL` static analysis for C#.
+- `CodeQL` static analysis (GitHub Code Scanning Default Setup).
 - `Dependency Review` for vulnerable dependency changes.
 
 **Commit message format:** `type(scope): short description`  
