@@ -25,6 +25,8 @@ using System.Diagnostics;
 using System.Security;
 using System.Runtime.ConstrainedExecution;
 using System.IO;
+using System.ComponentModel;
+using System.Security.Cryptography;
 using KeePassLib.Utility;
 
 namespace KeeChallenge
@@ -39,10 +41,30 @@ namespace KeeChallenge
     {
         public const uint yubiRespLen = 20;
         private const uint yubiBuffLen = 64;
+        private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000;
+        private const uint LOAD_LIBRARY_SEARCH_USER_DIRS = 0x00000400;
 
         public uint ResponseLength { get { return yubiRespLen; } }
 
         private IReadOnlyList<string> nativeDLLs = new List<string>() { "libykpers-1-1.dll", "libyubikey-0.dll", "libjson-0.dll", "libjson-c-2.dll" };
+
+        private static readonly IReadOnlyDictionary<string, string> nativeDllHashes32 =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "libjson-0.dll", "74B9AE9167321E7F1A73419A356148F0FA3BCC06B0CC23F21DE9AB0D059AEA2D" },
+                { "libjson-c-2.dll", "D346EA2FD1C12F33BC366AA7ABDED0439047471F37D34BE4C551C28A0CEFEE5B" },
+                { "libykpers-1-1.dll", "97B347F7AC217F8E33A94FF10AE6E26952C97F89963A5FCB47EDC2AAC800DCC6" },
+                { "libyubikey-0.dll", "D39849F504460F8AF671C0056B17291B66C5A5D6B41FE6B7340EB071CDF85E63" }
+            };
+
+        private static readonly IReadOnlyDictionary<string, string> nativeDllHashes64 =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "libjson-0.dll", "142CCC9416BCD1E811FA544DCD605CD4AFAB99053061E5F14C102AC5BE5A4E7A" },
+                { "libjson-c-2.dll", "8CE09E34E741E3F07B8EB3DA44180C6B3EB7CB88604843B5F8D39386EEC2A287" },
+                { "libykpers-1-1.dll", "C93C2CC2BB72965591BC4F6E274A187694D74C16966B9E7E99B6A5AFB4513E06" },
+                { "libyubikey-0.dll", "A5E6949A09A2E145A1A5B7CBC883C952791A42B9D97EC070FE29294D3E12F5E9" }
+            };
 
         private static bool is64BitProcess = (IntPtr.Size == 8);
 
@@ -71,6 +93,15 @@ namespace KeeChallenge
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         static extern bool SetDllDirectory(string lpPathName);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetDefaultDllDirectories(uint DirectoryFlags);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr AddDllDirectory(string NewDirectory);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool RemoveDllDirectory(IntPtr Cookie);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string methodName);
 
@@ -95,6 +126,78 @@ namespace KeeChallenge
         });
 
         private IntPtr yk = IntPtr.Zero;
+        private IntPtr dllDirectoryCookie = IntPtr.Zero;
+        private bool usingLegacySetDllDirectory = false;
+
+        private static string ComputeSha256(string filePath)
+        {
+            using (SHA256 sha = SHA256.Create())
+            using (FileStream fs = File.OpenRead(filePath))
+            {
+                byte[] hash = sha.ComputeHash(fs);
+                return BitConverter.ToString(hash).Replace("-", string.Empty);
+            }
+        }
+
+        private static bool ValidateNativeDllSet(string directory, bool use64BitHashes, out string error)
+        {
+            error = string.Empty;
+            IReadOnlyDictionary<string, string> expectedHashes = use64BitHashes ? nativeDllHashes64 : nativeDllHashes32;
+
+            foreach (KeyValuePair<string, string> expected in expectedHashes)
+            {
+                string dllPath = Path.Combine(directory, expected.Key);
+                if (!File.Exists(dllPath))
+                {
+                    error = string.Format("Missing required native library: {0}", dllPath);
+                    return false;
+                }
+
+                string actualHash = ComputeSha256(dllPath);
+                if (!string.Equals(actualHash, expected.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    error = string.Format("Integrity check failed for native library: {0}", dllPath);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ConfigureNativeDllSearchPath(string nativeDir)
+        {
+            // Prefer per-process user DLL directories over process-wide SetDllDirectory.
+            if (DoesWin32MethodExist("kernel32.dll", "SetDefaultDllDirectories") &&
+                DoesWin32MethodExist("kernel32.dll", "AddDllDirectory"))
+            {
+                uint flags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_USER_DIRS;
+                if (!SetDefaultDllDirectories(flags))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to set secure DLL search directories.");
+                }
+
+                dllDirectoryCookie = AddDllDirectory(nativeDir);
+                if (dllDirectoryCookie == IntPtr.Zero)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to add native DLL directory.");
+                }
+
+                usingLegacySetDllDirectory = false;
+                return;
+            }
+
+            if (!DoesWin32MethodExist("kernel32.dll", "SetDllDirectoryW"))
+            {
+                throw new PlatformNotSupportedException("KeeChallenge requires Windows XP Service Pack 1 or greater");
+            }
+
+            if (!SetDllDirectory(nativeDir))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to set native DLL directory.");
+            }
+
+            usingLegacySetDllDirectory = true;
+        }
 
         public bool Init()
         {
@@ -121,8 +224,6 @@ namespace KeeChallenge
                     }
 
 
-                    if (!DoesWin32MethodExist("kernel32.dll", "SetDllDirectoryW")) throw new PlatformNotSupportedException("KeeChallenge requires Windows XP Service Pack 1 or greater");
-                    
                     string _32BitDir = Path.Combine(AssemblyDirectory, "32bit");
                     string _64BitDir = Path.Combine(AssemblyDirectory, "64bit");
                     if (!Directory.Exists(_32BitDir) || !Directory.Exists(_64BitDir))
@@ -131,10 +232,16 @@ namespace KeeChallenge
                         MessageService.ShowWarning(err);
                         return false;
                     }
-                    if (!is64BitProcess) 
-                        SetDllDirectory(_32BitDir);
-                    else
-                        SetDllDirectory(_64BitDir);
+
+                    string nativeDir = is64BitProcess ? _64BitDir : _32BitDir;
+                    string integrityError;
+                    if (!ValidateNativeDllSet(nativeDir, is64BitProcess, out integrityError))
+                    {
+                        MessageService.ShowWarning("Native DLL integrity check failed.", integrityError);
+                        return false;
+                    }
+
+                    ConfigureNativeDllSearchPath(nativeDir);
                 }
                 if (yk_init() != 1) return false;
                 yk = yk_open_first_key();
@@ -194,6 +301,20 @@ namespace KeeChallenge
                 yk = IntPtr.Zero;
                 bool releasedOk = yk_release() == 1;
                 Debug.Assert(closedOk && releasedOk, "Error closing YubiKey");
+            }
+
+            if (dllDirectoryCookie != IntPtr.Zero)
+            {
+                bool removed = RemoveDllDirectory(dllDirectoryCookie);
+                Debug.Assert(removed, "Error removing native DLL directory cookie");
+                dllDirectoryCookie = IntPtr.Zero;
+            }
+
+            if (usingLegacySetDllDirectory)
+            {
+                // Best-effort reset for legacy fallback mode.
+                SetDllDirectory(null);
+                usingLegacySetDllDirectory = false;
             }
         }
 
