@@ -30,15 +30,25 @@ namespace KeeChallenge
         private static byte[] GenerateResponseForMode(byte[] challenge, byte[] key, bool lt64)
         {
             byte[] workingChallenge = challenge;
-            if (lt64)
+            try
             {
-                workingChallenge = new byte[challenge.Length - 1];
-                Array.Copy(challenge, workingChallenge, workingChallenge.Length);
-            }
+                if (lt64)
+                {
+                    workingChallenge = new byte[challenge.Length - 1];
+                    Array.Copy(challenge, workingChallenge, workingChallenge.Length);
+                }
 
-            using (System.Security.Cryptography.HMACSHA1 hmac = new System.Security.Cryptography.HMACSHA1(key))
+                using (System.Security.Cryptography.HMACSHA1 hmac = new System.Security.Cryptography.HMACSHA1(key))
+                {
+                    return hmac.ComputeHash(workingChallenge);
+                }
+            }
+            finally
             {
-                return hmac.ComputeHash(workingChallenge);
+                if (!Object.ReferenceEquals(workingChallenge, challenge))
+                {
+                    SensitiveData.Clear(workingChallenge);
+                }
             }
         }
 
@@ -80,78 +90,93 @@ namespace KeeChallenge
 
                 Secret = new byte[KeeChallengeProv.secretLenBytes];
                 string normalizedSecret = secretTextBox.Text.Replace(" ", string.Empty); //remove spaces
-                
-                if (normalizedSecret.Length == KeeChallengeProv.secretLenBytes * 2)
+                byte[] challenge = null;
+                byte[] validResp = null;
+                KeyEntry validate = null;
+
+                try
                 {
-                    for (int i = 0; i < normalizedSecret.Length; i += 2)
+                    if (normalizedSecret.Length == KeeChallengeProv.secretLenBytes * 2)
                     {
-                        string b = normalizedSecret.Substring(i, 2);
-                        Secret[i / 2] = Convert.ToByte(b,16);
-                    }
-                    secretTextBox.Text = string.Empty;
-                }
-                else
-                {
-                    //invalid key
-                    MessageService.ShowWarning("Error: secret must be 20 bytes long.");
-                    e.Cancel = true;
-                    return;
-                }
-                
-                //Confirm they have a key whose secret matches this
-                byte[] challenge = m_parent.GenerateChallenge();                
-                KeyEntry validate = new KeyEntry(m_parent, challenge);               
-                
-                if ( validate.ShowDialog(this) != DialogResult.OK)
-                {
-                    MessageService.ShowWarning("Unable to get response from YubiKey.");
-                    e.Cancel = true;
-                    Array.Clear(Secret, 0, Secret.Length);
-                    return;
-                }
-
-                byte[] validResp = m_parent.GenerateResponse(challenge, Secret);
-
-                if (!FixedTimeEquals(validate.Response, validResp))
-                {
-                    bool oppositeLt64 = !m_parent.LT64;
-                    byte[] oppositeResp = GenerateResponseForMode(challenge, Secret, oppositeLt64);
-                    bool oppositeMatches = FixedTimeEquals(validate.Response, oppositeResp);
-                    Array.Clear(oppositeResp, 0, oppositeResp.Length);
-
-                    if (oppositeMatches)
-                    {
-                        string modeText = oppositeLt64 ? "enabled" : "disabled";
-                        DialogResult switchMode = MessageBox.Show(
-                            "The entered secret matches your YubiKey when Variable Length Challenge is " + modeText + ".\n\n" +
-                            "Would you like to switch this setting now?",
-                            "KeeChallenge-Modern",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question);
-
-                        if (switchMode == DialogResult.Yes)
+                        for (int i = 0; i < normalizedSecret.Length; i += 2)
                         {
-                            LT64_cb.Checked = oppositeLt64;
-                            m_parent.LT64 = oppositeLt64;
-                            Array.Clear(validResp, 0, validResp.Length);
-                            return;
+                            string b = normalizedSecret.Substring(i, 2);
+                            Secret[i / 2] = Convert.ToByte(b,16);
                         }
-
-                        MessageService.ShowWarning("Error: secret does not match YubiKey with the current challenge mode.");
+                        secretTextBox.Text = string.Empty;
                     }
                     else
                     {
-                        MessageService.ShowWarning("Error: secret does not match YubiKey.");
+                        //invalid key
+                        MessageService.ShowWarning("Error: secret must be 20 bytes long.");
+                        e.Cancel = true;
+                        return;
+                    }
+                    
+                    //Confirm they have a key whose secret matches this
+                    challenge = m_parent.GenerateChallenge();                
+                    validate = new KeyEntry(m_parent, challenge);               
+                    
+                    if ( validate.ShowDialog(this) != DialogResult.OK)
+                    {
+                        MessageService.ShowWarning("Unable to get response from YubiKey.");
+                        e.Cancel = true;
+                        SensitiveData.Clear(Secret);
+                        return;
                     }
 
-                    e.Cancel = true;
-                    Array.Clear(Secret, 0, Secret.Length);
-                    Array.Clear(validResp, 0, validResp.Length);
-                    return; //Error: wrong secret
+                    validResp = m_parent.GenerateResponse(challenge, Secret);
+
+                    if (!FixedTimeEquals(validate.Response, validResp))
+                    {
+                        bool oppositeLt64 = !m_parent.LT64;
+                        byte[] oppositeResp = GenerateResponseForMode(challenge, Secret, oppositeLt64);
+                        bool oppositeMatches = FixedTimeEquals(validate.Response, oppositeResp);
+                        SensitiveData.Clear(oppositeResp);
+
+                        if (oppositeMatches)
+                        {
+                            string modeText = oppositeLt64 ? "enabled" : "disabled";
+                            DialogResult switchMode = MessageBox.Show(
+                                "The entered secret matches your YubiKey when Variable Length Challenge is " + modeText + ".\n\n" +
+                                "Would you like to switch this setting now?",
+                                "KeeChallenge-Modern",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+
+                            if (switchMode == DialogResult.Yes)
+                            {
+                                LT64_cb.Checked = oppositeLt64;
+                                m_parent.LT64 = oppositeLt64;
+                                return;
+                            }
+
+                            MessageService.ShowWarning("Error: secret does not match YubiKey with the current challenge mode.");
+                        }
+                        else
+                        {
+                            MessageService.ShowWarning("Error: secret does not match YubiKey.");
+                        }
+
+                        e.Cancel = true;
+                        SensitiveData.Clear(Secret);
+                        return; //Error: wrong secret
+                    }
                 }
-                
-                Array.Clear(validate.Response, 0, validate.Response.Length);
-                Array.Clear(validResp, 0, validResp.Length);
+                finally
+                {
+                    SensitiveData.Clear(challenge);
+                    SensitiveData.Clear(validResp);
+
+                    if (validate != null)
+                    {
+                        SensitiveData.Clear(validate.Response);
+                    }
+                }
+            }
+            else
+            {
+                SensitiveData.Clear(Secret);
             }
             GlobalWindowManager.RemoveWindow(this);
         }    

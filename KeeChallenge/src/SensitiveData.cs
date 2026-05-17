@@ -1,0 +1,47 @@
+/* KeeChallenge--Provides Yubikey challenge-response capability to Keepass
+*  Copyright (C) 2014  Ben Rush
+*  
+*  This program is free software; you can redistribute it and/or
+*  modify it under the terms of the GNU General Public License
+*  as published by the Free Software Foundation; either version 3
+*  of the License, or (at your option) any later version.
+*  
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*  
+*  You should have received a copy of the GNU General Public License
+*  along with this program; if not, write to the Free Software
+*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+using System;
+
+namespace KeeChallenge
+{
+    internal static class SensitiveData
+    {
+        internal static void Clear(byte[] buffer)
+        {
+            if (buffer == null || buffer.Length == 0) return;
+            Array.Clear(buffer, 0, buffer.Length);
+        }
+
+        internal static void Clear(params byte[][] buffers)
+        {
+            if (buffers == null) return;
+
+            for (int i = 0; i < buffers.Length; ++i)
+            {
+                Clear(buffers[i]);
+            }
+        }
+
+        internal static void Clear(ref byte[] buffer)
+        {
+            Clear(buffer);
+            buffer = null;
+        }
+    }
+}
