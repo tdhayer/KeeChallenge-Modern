@@ -250,7 +250,8 @@ namespace KeeChallenge
             catch (Exception e)
             {
                 Debug.Assert(false, e.Message);
-                MessageService.ShowWarning("Error connecting to yubikey!", e.Message);
+                Diagnostics.TraceException("YubiWrapper.Init failed.", e);
+                MessageService.ShowWarning("Error connecting to YubiKey. Verify the device is present and bundled native libraries are intact.");
                 return false;
             }
            return true;

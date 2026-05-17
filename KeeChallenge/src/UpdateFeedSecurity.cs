@@ -49,7 +49,8 @@ namespace KeeChallenge
             }
             catch (Exception ex)
             {
-                error = "Unable to configure signed update feed verification: " + ex.Message;
+                Diagnostics.TraceException("Signed update feed configuration failed.", ex);
+                error = "Unable to configure signed update feed verification.";
                 return false;
             }
         }

@@ -143,7 +143,8 @@ namespace KeeChallenge
             catch (PlatformNotSupportedException err)
             {
                 Debug.Assert(false);
-                MessageService.ShowWarning(err.Message);
+                Diagnostics.TraceException("YubiKey platform initialization failed.", err);
+                MessageService.ShowWarning("KeeChallenge-Modern currently supports Windows hosts only.");
                 return;
             }
             //spawn background countdown timer

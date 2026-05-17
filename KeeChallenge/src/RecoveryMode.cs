@@ -50,25 +50,18 @@ namespace KeeChallenge
             {
                 m_parent.LT64 = LT64_cb.Checked;
 
-                Secret = new byte[KeeChallengeProv.secretLenBytes];
-                string normalizedSecret = secretTextBox.Text.Replace(" ", string.Empty); //remove spaces
-               
-                if (normalizedSecret.Length == KeeChallengeProv.secretLenBytes * 2)
+                string parseError;
+                byte[] parsedSecret = null;
+                if (!SecretInputParser.TryParseSecret(secretTextBox.Text, out parsedSecret, out parseError))
                 {
-                    for (int i = 0; i < normalizedSecret.Length; i += 2)
-                    {
-                        string b = normalizedSecret.Substring(i, 2);
-                        Secret[i / 2] = Convert.ToByte(b,16);
-                    }
-                    secretTextBox.Text = string.Empty;
-                }
-                else
-                {
-                    //invalid key
-                    MessageService.ShowWarning("Error: secret must be 20 bytes long.");
+                    MessageService.ShowWarning(parseError);
                     e.Cancel = true;
                     return;
                 }
+
+                Secret = parsedSecret;
+
+                secretTextBox.Text = string.Empty;
             }
             else
             {
