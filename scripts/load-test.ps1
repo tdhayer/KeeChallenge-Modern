@@ -5,7 +5,7 @@
 # parameterless ctor, Initialize(null) sanity, and UpdateFeedSecurity.TryConfigure.
 #
 # Pass criterion: every section reports OK; Initialize(null) returns False
-# (that is correct behavior — host==null guard); no exceptions.
+# (that is correct behavior -- host==null guard); no exceptions.
 #
 # IMPORTANT: This probe is NECESSARY but NOT SUFFICIENT. v2.0.7 passed this probe
 # yet was silently rejected by the actual KeePass plugin host. Always follow up
@@ -151,7 +151,7 @@ if ($subs.Count -ge 1) {
 Write-Host "`n=== Optional: UpdateFeedSecurity.TryConfigure ==="
 $ufs = $asm.GetType('KeeChallenge.UpdateFeedSecurity', $false)
 if ($null -eq $ufs) {
-    Write-Host "  (skipped — UpdateFeedSecurity type not present in this build)"
+    Write-Host "  (skipped -- UpdateFeedSecurity type not present in this build)"
 } else {
     $tryConfig = $ufs.GetMethod('TryConfigure', [System.Reflection.BindingFlags]'NonPublic,Static,Public')
     if ($null -eq $tryConfig) {
