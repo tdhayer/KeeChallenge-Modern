@@ -125,7 +125,11 @@ namespace KeeChallenge
             0x38  //SLOT_CHAL_HMAC2
         });
 
+        private static readonly object nativeApiSync = new object();
+
         private IntPtr yk = IntPtr.Zero;
+        private bool libraryInited = false;
+        private bool needsUsbSettle = false;
         private IntPtr dllDirectoryCookie = IntPtr.Zero;
         private bool usingLegacySetDllDirectory = false;
 
@@ -243,9 +247,18 @@ namespace KeeChallenge
 
                     ConfigureNativeDllSearchPath(nativeDir);
                 }
-                if (yk_init() != 1) return false;
-                yk = yk_open_first_key();
-                if (yk == IntPtr.Zero) return false;
+                lock (nativeApiSync)
+                {
+                    if (yk_init() != 1) return false;
+                    libraryInited = true;
+                    yk = yk_open_first_key();
+                    if (yk == IntPtr.Zero)
+                    {
+                        yk_release();
+                        libraryInited = false;
+                        return false;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -272,20 +285,54 @@ namespace KeeChallenge
         [DllImport("libykpers-1-1.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern int yk_challenge_response(IntPtr yk, byte yk_cmd, int may_block, uint challenge_len, byte[] challenge, uint response_len, byte[] response);
                
-        public bool ChallengeResponse(YubiSlot slot, byte[] challenge, out byte[] response)
+        public bool ChallengeResponse(YubiSlot slot, byte[] challenge, out byte[] response, Func<bool> shouldCancel = null)
         {
             response = new byte[yubiRespLen];
-            if (yk == IntPtr.Zero) return false;
+
+            // Snapshot the handle under the lock so we don't hold the static lock
+            // across the blocking native call. Holding it would block any other
+            // instance's Init/Close (e.g., a follow-up dialog after Abort) until
+            // this blocking call returns, which produces a frozen UI / stalled timer.
+            IntPtr handle;
+            lock (nativeApiSync) { handle = yk; }
+            if (handle == IntPtr.Zero) return false;
+
+            if (shouldCancel != null && shouldCancel()) return false;
 
             byte[] temp = new byte[yubiBuffLen];
             try
             {
-                int ret = yk_challenge_response(yk, slots[(int)slot], 1, (uint)challenge.Length, challenge, yubiBuffLen, temp);
+                var sw = Stopwatch.StartNew();
+                int ret = yk_challenge_response(handle, slots[(int)slot], 1, (uint)challenge.Length, challenge, yubiBuffLen, temp);
+                sw.Stop();
+
+                if (shouldCancel != null && shouldCancel()) return false;
+
+                // If the call returned failure suspiciously fast (well below the
+                // human touch latency floor), the device is likely in a transient
+                // state from a recent force-close. Retry once after a brief pause.
+                if (ret != 1 && sw.ElapsedMilliseconds < 500)
+                {
+                    Array.Clear(temp, 0, temp.Length);
+                    try { System.Threading.Thread.Sleep(300); } catch { }
+
+                    if (shouldCancel != null && shouldCancel()) return false;
+
+                    IntPtr retryHandle;
+                    lock (nativeApiSync) { retryHandle = yk; }
+                    if (retryHandle == IntPtr.Zero) return false;
+
+                    ret = yk_challenge_response(retryHandle, slots[(int)slot], 1, (uint)challenge.Length, challenge, yubiBuffLen, temp);
+
+                    if (shouldCancel != null && shouldCancel()) return false;
+                }
+
                 if (ret == 1)
                 {
                     Array.Copy(temp, response, response.Length);
                     return true;
                 }
+
                 return false;
             }
             finally
@@ -294,14 +341,58 @@ namespace KeeChallenge
             }
         }
 
+        /// <summary>
+        /// Forces any in-flight blocking <see cref="ChallengeResponse"/> call to return
+        /// promptly by closing the underlying YubiKey handle. Safe to call from the UI
+        /// thread while a worker is blocked waiting for a touch.
+        /// </summary>
+        public void RequestCancel()
+        {
+            IntPtr handle;
+            lock (nativeApiSync)
+            {
+                handle = yk;
+                yk = IntPtr.Zero;
+            }
+            if (handle != IntPtr.Zero)
+            {
+                try { yk_close_key(handle); }
+                catch (Exception e) { Diagnostics.TraceException("YubiWrapper.RequestCancel close failed.", e); }
+                // Mark that this instance closed abruptly; Close() will hold the
+                // caller briefly so the device's USB endpoint can settle before a
+                // follow-up dialog issues yk_open_first_key.
+                needsUsbSettle = true;
+            }
+        }
+
         public void Close()
         {
-            if (yk != IntPtr.Zero)
+            lock (nativeApiSync)
             {
-                bool closedOk = yk_close_key(yk) == 1;
-                yk = IntPtr.Zero;
-                bool releasedOk = yk_release() == 1;
+                bool closedOk = true;
+                if (yk != IntPtr.Zero)
+                {
+                    closedOk = yk_close_key(yk) == 1;
+                    yk = IntPtr.Zero;
+                }
+                bool releasedOk = true;
+                if (libraryInited)
+                {
+                    releasedOk = yk_release() == 1;
+                    libraryInited = false;
+                }
                 Debug.Assert(closedOk && releasedOk, "Error closing YubiKey");
+            }
+
+            if (needsUsbSettle)
+            {
+                // libykpers + the underlying USB stack briefly leave the device
+                // in a half-open state after an abrupt yk_close_key. A subsequent
+                // yk_open_first_key returns a handle but the next transfer fails
+                // immediately. Pause briefly so the next dialog's challenge works.
+                try { System.Threading.Thread.Sleep(250); }
+                catch { }
+                needsUsbSettle = false;
             }
 
             if (dllDirectoryCookie != IntPtr.Zero)

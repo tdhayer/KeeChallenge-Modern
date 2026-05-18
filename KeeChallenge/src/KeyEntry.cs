@@ -37,6 +37,9 @@ namespace KeeChallenge
         private KeeChallengeProv m_parent;
         
         private bool success;
+        private bool cancelRequested;
+        private bool formClosed;
+        private bool deferProviderDispose;
 
         private BackgroundWorker keyWorker;
 
@@ -85,19 +88,46 @@ namespace KeeChallenge
         private void YubiChallengeResponse(object sender, DoWorkEventArgs e) //Should terminate in 15seconds worst case
         {
             //Send the challenge to yubikey and get response
-            if (Challenge == null) return;
-            success = yubi.ChallengeResponse(yubiSlot, Challenge, out m_response);
-            if (!success)
-                MessageService.ShowWarning("Error getting response from YubiKey.");
+            if (Challenge == null || cancelRequested || yubi == null) return;
 
-            return;
+            try
+            {
+                success = yubi.ChallengeResponse(yubiSlot, Challenge, out m_response,
+                    () => cancelRequested || formClosed || IsDisposed);
+            }
+            catch (Exception ex)
+            {
+                success = false;
+                Diagnostics.TraceException("Yubi challenge-response worker failed.", ex);
+            }
         }
 
-        private void KeyWorkerDone(object sender, EventArgs e) //guaranteed to run after YubiChallengeResponse
+        private void KeyWorkerDone(object sender, RunWorkerCompletedEventArgs e) //guaranteed to run after YubiChallengeResponse
         {
+            if (deferProviderDispose && yubi != null)
+            {
+                yubi.Dispose();
+                yubi = null;
+                deferProviderDispose = false;
+            }
+
+            if (formClosed || cancelRequested || IsDisposed) return;
+
+            if (e.Error != null)
+            {
+                Diagnostics.TraceException("Yubi challenge-response completion error.", e.Error);
+                MessageService.ShowWarning("Error getting response from YubiKey.");
+                DialogResult = DialogResult.No;
+                return;
+            }
+
             if (success)
                 DialogResult = DialogResult.OK;  //setting this calls Close() IF the form is shown using ShowDialog()
-            else DialogResult = DialogResult.No; 
+            else
+            {
+                MessageService.ShowWarning("Error getting response from YubiKey.");
+                DialogResult = DialogResult.No;
+            }
         }
 
         private void Countdown(object sender, EventArgs eventArgs)
@@ -113,7 +143,11 @@ namespace KeeChallenge
 
         private void CountdownCompleted()
         {
-            countdown.Stop();
+            if (countdown != null)
+            {
+                countdown.Stop();
+            }
+
             Close();
         }
         
@@ -161,21 +195,55 @@ namespace KeeChallenge
 
         private void OnFormClosed(object sender, FormClosedEventArgs e)
         {
+            formClosed = true;
+
             if (countdown != null)
             {
                 countdown.Enabled = false;
                 countdown.Dispose();
+                countdown = null;
             }
+
             if (yubi != null)
             {
-                yubi.Dispose();
-                yubi = null;
+                if (keyWorker != null && keyWorker.IsBusy)
+                {
+                    // Force any in-flight blocking native call to return so a
+                    // follow-up dialog's Init/timer start isn't stalled.
+                    try { yubi.RequestCancel(); }
+                    catch (Exception ex) { Diagnostics.TraceException("RequestCancel from OnFormClosed failed.", ex); }
+
+                    // Drain the worker so the YubiKey handle + library are fully
+                    // released before control returns to the caller. Without this,
+                    // a fast re-open of the password dialog can hit a half-released
+                    // device state and the next challenge fails immediately.
+                    var sw = Stopwatch.StartNew();
+                    while (keyWorker.IsBusy && sw.ElapsedMilliseconds < 1500)
+                    {
+                        Application.DoEvents();
+                        System.Threading.Thread.Sleep(10);
+                    }
+                }
+
+                if (keyWorker != null && keyWorker.IsBusy)
+                {
+                    // Worker still hasn't unwound; fall back to deferred disposal.
+                    deferProviderDispose = true;
+                }
+                else
+                {
+                    yubi.Dispose();
+                    yubi = null;
+                }
             }
+
             GlobalWindowManager.RemoveWindow(this);
         }
 
         private void AbortButton_Click(object sender, EventArgs e)
         {
+            cancelRequested = true;
+            // OnFormClosed handles RequestCancel + worker drain.
             CountdownCompleted();
         }
     }
