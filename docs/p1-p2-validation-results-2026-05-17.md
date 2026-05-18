@@ -44,14 +44,22 @@ Notes:
 
 - [x] Existing DB unlock success
 - [x] Wrong/failed challenge-response fails closed
-- [ ] Recovery mode success and re-encryption
-- [ ] Cancel path returns cleanly
+- [x] Recovery mode success and re-encryption
+- [x] Cancel path returns cleanly
 
 Notes:
 
 - Existing DB unlock succeeded on x86 sandbox.
 - Wrong/failed challenge-response blocked unlock as expected (fail-closed) and app remained responsive.
-- Intermittent behavior observed during x86 recovery follow-up: first normal unlock after recovery could be erratic (extra touch/retry needed). Additional KeyEntry/YubiWrapper cancellation and polling fix applied; retest in progress.
+- Recovery + re-encryption succeeded on x86; follow-up normal unlock with the same key file also succeeded.
+- Cancel/abort/timeout all return cleanly. Follow-up unlock on the next attempt succeeds with normal touch responsiveness.
+- Cancel/touch fix (commit 21e6d01 on `feat/p2-input-validation-sanitized-errors`):
+  1. Static `nativeApiSync` lock no longer held across the blocking `yk_challenge_response` call.
+  2. `YubiWrapper.RequestCancel` force-returns the in-flight blocking call by closing the handle on the UI thread.
+  3. `Close()` tracks `libraryInited` separately so `yk_release` always pairs with `yk_init` even after a force-cancel.
+  4. `KeyEntry.OnFormClosed` drains the BackgroundWorker via `Application.DoEvents` (up to 1.5 s) before disposing.
+  5. 250 ms USB-settle pause at end of `Close()` when `needsUsbSettle` was flagged by `RequestCancel`.
+  6. `ChallengeResponse` retries once if the native call returns failure in < 500 ms (well below human touch latency), absorbing residual transient device state after a recent force-close.
 
 ## 3) P2 Input Validation Matrix
 
@@ -107,3 +115,13 @@ Notes:
 Blockers:
 
 - 
+
+## Resume Point (paused 2026-05-17 evening)
+
+Sections 1 + 2 complete (x64 4/4, x86 4/4). Remaining to complete before GO:
+
+1. Section 3 - Input validation matrix (KeyCreation + RecoveryMode dialogs against malformed hex).
+2. Section 4 - Error surface / diagnostics review.
+3. Section 5 - Update authenticity end-to-end against live VERSION feed.
+
+Sandbox: `test-sandbox/p1-p2/keepass-{x86,x64}/Plugins/KeeChallenge.dll` already contains the latest fix build.
