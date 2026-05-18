@@ -25,25 +25,33 @@ Notes:
 
 ### Windows + KeePass x64 + 64bit native libs
 
-- [ ] Existing DB unlock success
-- [ ] Wrong/failed challenge-response fails closed
-- [ ] Recovery mode success and re-encryption
-- [ ] Cancel path returns cleanly
+- [x] Existing DB unlock success
+- [x] Wrong/failed challenge-response fails closed
+- [x] Recovery mode success and re-encryption
+- [x] Cancel path returns cleanly
 
 Notes:
 
-- 
+- Existing DB unlock succeeded on x64 sandbox.
+- Wrong/failed challenge-response blocked unlock as expected; user-facing message observed: "Error getting response from YubiKey."
+- Recovery mode unlock succeeded; follow-up normal YubiKey unlock also succeeded, confirming re-encryption path.
+- Found and fixed a transient abort/retry race: first immediate retry could show "Error getting response from YubiKey." without touch; patched in `KeyEntry` and sandbox refreshed for retest.
+- Retest after fix: both Abort and timeout paths returned cleanly; immediate next attempt unlocked successfully.
+- Final retest (latest patch): timer behavior is normal after both Abort and timeout, and the following unlock succeeds on the next attempt.
+- Additional tuning applied for touch responsiveness (non-blocking challenge poll interval increased) to stabilize first-touch behavior after recovery follow-up flows.
 
 ### Windows + KeePass x86 + 32bit native libs
 
-- [ ] Existing DB unlock success
-- [ ] Wrong/failed challenge-response fails closed
+- [x] Existing DB unlock success
+- [x] Wrong/failed challenge-response fails closed
 - [ ] Recovery mode success and re-encryption
 - [ ] Cancel path returns cleanly
 
 Notes:
 
-- 
+- Existing DB unlock succeeded on x86 sandbox.
+- Wrong/failed challenge-response blocked unlock as expected (fail-closed) and app remained responsive.
+- Intermittent behavior observed during x86 recovery follow-up: first normal unlock after recovery could be erratic (extra touch/retry needed). Additional KeyEntry/YubiWrapper cancellation and polling fix applied; retest in progress.
 
 ## 3) P2 Input Validation Matrix
 
