@@ -80,6 +80,9 @@ security-hardening-roadmap.md
 # Local manual validation sandbox artifacts
 test-sandbox/
 
+# Local scratch / release-artifact diffing dir
+.tmp/
+
 # Local editor/workstation config
 .vscode/
 
