@@ -1,7 +1,7 @@
-﻿[KeeChallenge-Modern v2.0.5](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.8](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
-> **Notice (2026-05-18):** Releases **v2.0.6** and **v2.0.7** were withdrawn. Both fail to load silently in KeePass and are marked as pre-release on GitHub — **do not install them**. The current supported release is **v2.0.5**. The P1/P2 security hardening originally bundled into v2.0.6/v2.0.7 will be reintroduced in smaller, independently-validated increments.
+> **Notice (2026-05-18):** Releases **v2.0.6** and **v2.0.7** were withdrawn. Both fail to load silently in KeePass and are marked as pre-release on GitHub — **do not install them**. The current supported release is **v2.0.8**. The P1/P2 security hardening originally bundled into v2.0.6/v2.0.7 will be reintroduced in smaller, independently-validated increments.
 
 ## Fork Lineage
 - This repository is an independently maintained fork of the original KeeChallenge project.
@@ -10,7 +10,12 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
-v2.0.6 / v2.0.7 — **WITHDRAWN.** Both releases fail to load silently in KeePass (Plugins panel shows empty; unlock dialog treats the provider name as a key-file path). Master branch was rolled back to v2.0.5 on 2026-05-18. Do not use these releases.
+v2.0.8
+* Fork attribution metadata: `AssemblyCompany` set to `KeeChallenge-Modern Maintainers` and `AssemblyCopyright` updated to reflect both upstream author and fork maintainer. `AssemblyTitle` and `AssemblyProduct` are deliberately unchanged.
+* **Rule learned the hard way (root cause of v2.0.6/v2.0.7 silent rejection):** KeePass 2.61.x silently refuses to load any plugin whose `AssemblyProduct` is not exactly `"KeePass Plugin"`. Renaming it (even to `"KeeChallenge KeePass Plugin"`) drops the plugin from Tools→Plugins with no error or log entry. Bisect identified commit `3d32336` as the regression; `AssemblyProduct` is now locked.
+* Closes issue #12 (fork maintainer attribution).
+
+v2.0.6 / v2.0.7 — **WITHDRAWN.** Both releases fail to load silently in KeePass (Plugins panel shows empty; unlock dialog treats the provider name as a key-file path). Master branch was rolled back to v2.0.5 on 2026-05-18. Root cause: assembly attribution commit renamed `AssemblyProduct` away from the literal `"KeePass Plugin"`. Do not use these releases.
 
 v2.0.5
 * P0 hardening completed: native DLL loading trust boundary strengthened with bundled-library integrity validation and safer directory loading APIs.
