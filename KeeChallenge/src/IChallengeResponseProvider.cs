@@ -39,14 +39,7 @@ namespace KeeChallenge
         /// Perform a challenge-response operation.
         /// Returns true and populates <paramref name="response"/> on success.
         /// </summary>
-        bool ChallengeResponse(YubiSlot slot, byte[] challenge, out byte[] response, Func<bool> shouldCancel = null);
-
-        /// <summary>
-        /// Request that any in-flight <see cref="ChallengeResponse"/> call return promptly.
-        /// Implementations should be safe to call from a thread other than the one
-        /// that issued the challenge.
-        /// </summary>
-        void RequestCancel();
+        bool ChallengeResponse(YubiSlot slot, byte[] challenge, out byte[] response);
 
         /// <summary>Release the device handle.</summary>
         void Close();

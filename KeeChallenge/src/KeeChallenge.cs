@@ -41,7 +41,6 @@ namespace KeeChallenge
         private const long MaxMetadataFileBytes = 64 * 1024;
         private const long MaxMetadataXmlChars = 64 * 1024;
         private const int MaxEncryptedSecretBytes = 256;
-        private const string MetadataReadErrorMessage = "Error: metadata could not be read correctly. Reverting to Recovery Mode.";
         private bool m_LT64 = false;
 
         //If variable length challenges are enabled, a 63 byte challenge is sent instead.
@@ -103,11 +102,7 @@ namespace KeeChallenge
                 if (ctx.CreatingNewKey) return Create(ctx);
                 return Get(ctx);
             }
-            catch (Exception ex)
-            {
-                Diagnostics.TraceException("GetKey failed.", ex);
-                MessageService.ShowWarning("KeeChallenge could not complete key processing. Retry or use Recovery Mode if needed.");
-            }
+            catch (Exception ex) { MessageService.ShowWarning(ex.Message); }
 
             return null;
         }
@@ -125,23 +120,12 @@ namespace KeeChallenge
 
         public byte[] GenerateResponse(byte[] challenge, byte[] key)
         {
-            byte[] challengeForHmac = challenge;
-            try
-            {
-                if (LT64)
-                    challengeForHmac = challenge.Take(challengeLenBytes - 1).ToArray();
+            if (LT64)
+                challenge = challenge.Take(challengeLenBytes - 1).ToArray();
 
-                using (HMACSHA1 hmac = new HMACSHA1(key))
-                {
-                    return hmac.ComputeHash(challengeForHmac);
-                }
-            }
-            finally
+            using (HMACSHA1 hmac = new HMACSHA1(key))
             {
-                if (!Object.ReferenceEquals(challengeForHmac, challenge))
-                {
-                    SensitiveData.Clear(challengeForHmac);
-                }
+                return hmac.ComputeHash(challenge);
             }
         }
 
@@ -161,51 +145,49 @@ namespace KeeChallenge
 
         private bool EncryptAndSave(byte[] secret)
         {
-            byte[] challenge = null;
-            byte[] resp = null;
-            byte[] key = null;
-            byte[] secretHash = null;
-            byte[] iv = null;
-            byte[] encrypted = null;
-            Stream s = null;
-            try
+            //generate a random challenge for use next time
+            byte[] challenge = GenerateChallenge();
+
+            //generate the expected HMAC-SHA1 response for the challenge based on the secret
+            byte[] resp = GenerateResponse(challenge, secret);
+
+            //use the response to encrypt the secret
+            byte[] key;
+            byte[] secretHash;
+            byte[] iv;
+            using (SHA256 sha = SHA256.Create())
             {
-                //generate a random challenge for use next time
-                challenge = GenerateChallenge();
+                key = sha.ComputeHash(resp); // get a 256 bit key from the 160 bit hmac response
+                secretHash = sha.ComputeHash(secret);
+            }
 
-                //generate the expected HMAC-SHA1 response for the challenge based on the secret
-                resp = GenerateResponse(challenge, secret);
+            byte[] encrypted;
+            using (Aes aes = Aes.Create())
+            {
+                aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
+                aes.Key = key;
+                aes.GenerateIV();
+                aes.Padding = PaddingMode.PKCS7;
+                iv = aes.IV;
 
-                //use the response to encrypt the secret
-                using (SHA256 sha = SHA256.Create())
+                using (ICryptoTransform enc = aes.CreateEncryptor())
                 {
-                    key = sha.ComputeHash(resp); // get a 256 bit key from the 160 bit hmac response
-                    secretHash = sha.ComputeHash(secret);
-                }
-
-                using (Aes aes = Aes.Create())
-                {
-                    aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
-                    aes.Key = key;
-                    aes.GenerateIV();
-                    aes.Padding = PaddingMode.PKCS7;
-                    iv = (byte[])aes.IV.Clone();
-
-                    using (ICryptoTransform enc = aes.CreateEncryptor())
+                    using (MemoryStream msEncrypt = new MemoryStream())
                     {
-                        using (MemoryStream msEncrypt = new MemoryStream())
+                        using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, enc, CryptoStreamMode.Write))
                         {
-                            using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, enc, CryptoStreamMode.Write))
-                            {
-                                csEncrypt.Write(secret, 0, secret.Length);
-                                csEncrypt.FlushFinalBlock();
+                            csEncrypt.Write(secret, 0, secret.Length);
+                            csEncrypt.FlushFinalBlock();
 
-                                encrypted = msEncrypt.ToArray();
-                            }
+                            encrypted = msEncrypt.ToArray();
                         }
                     }
                 }
+            }
 
+            Stream s = null;
+            try
+            {
                 FileTransactionEx ft = new FileTransactionEx(mInfo,
                     false);
                 s = ft.OpenWrite();
@@ -216,40 +198,36 @@ namespace KeeChallenge
                 settings.IndentChars = "\t";
                 settings.NewLineOnAttributes = true;
 
-                using (XmlWriter xml = XmlWriter.Create(s, settings))
-                {
-                    xml.WriteStartDocument();
-                    xml.WriteStartElement("data");
+                XmlWriter xml = XmlWriter.Create(s, settings);
+                xml.WriteStartDocument();
+                xml.WriteStartElement("data");
 
-                    xml.WriteElementString("version", MetadataVersion.ToString());
+                xml.WriteElementString("version", MetadataVersion.ToString());
 
-                    xml.WriteStartElement("aes");
-                    xml.WriteElementString("encrypted", Convert.ToBase64String(encrypted));
-                    xml.WriteElementString("iv", Convert.ToBase64String(iv));
-                    xml.WriteEndElement();
+                xml.WriteStartElement("aes");
+                xml.WriteElementString("encrypted", Convert.ToBase64String(encrypted));
+                xml.WriteElementString("iv", Convert.ToBase64String(iv));
+                xml.WriteEndElement();
 
-                    xml.WriteElementString("challenge", Convert.ToBase64String(challenge));
-                    xml.WriteElementString("verification", Convert.ToBase64String(secretHash));
-                    xml.WriteElementString("lt64", LT64.ToString());
+                xml.WriteElementString("challenge", Convert.ToBase64String(challenge));
+                xml.WriteElementString("verification", Convert.ToBase64String(secretHash));
+                xml.WriteElementString("lt64", LT64.ToString());
 
-                    xml.WriteEndElement();
-                    xml.WriteEndDocument();
-                }
+                xml.WriteEndElement();
+                xml.WriteEndDocument();
+                xml.Close();                
   
                 ft.CommitWrite();  
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Diagnostics.TraceException("EncryptAndSave failed for metadata path: " + mInfo.Path, ex);
-                MessageService.ShowWarning("Error: unable to write KeeChallenge metadata.");
+                MessageService.ShowWarning(String.Format("Error: unable to write to file {0}", mInfo.Path));
                 return false;
             }    
             finally
             {
                 if (s != null)
                     s.Close();
-
-                SensitiveData.Clear(challenge, resp, key, secretHash, iv, encrypted);
             }
 
             return true;
@@ -258,68 +236,56 @@ namespace KeeChallenge
         private static bool DecryptSecret(byte[] encryptedSecret, byte[] yubiResp, byte[] iv, byte[] verification, out byte[] secret)
         {
             //use the response to decrypt the secret
-            byte[] key = null;
-            byte[] secretHash = null;
+            byte[] key;
+            using (SHA256 sha = SHA256.Create())
+            {
+                key = sha.ComputeHash(yubiResp); // get a 256 bit key from the 160 bit hmac response
+            }
+
             secret = new byte[keyLenBytes];
             try
             {
-                using (SHA256 sha = SHA256.Create())
+                using (Aes aes = Aes.Create())
                 {
-                    key = sha.ComputeHash(yubiResp); // get a 256 bit key from the 160 bit hmac response
-                }
+                    aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
+                    aes.Key = key;
+                    aes.IV = iv;
+                    aes.Padding = PaddingMode.PKCS7;
 
-                try
-                {
-                    using (Aes aes = Aes.Create())
+                    using (ICryptoTransform dec = aes.CreateDecryptor())
                     {
-                        aes.KeySize = key.Length * sizeof(byte) * 8; //pedantic, but foolproof
-                        aes.Key = key;
-                        aes.IV = iv;
-                        aes.Padding = PaddingMode.PKCS7;
-
-                        using (ICryptoTransform dec = aes.CreateDecryptor())
+                        using (MemoryStream msDecrypt = new MemoryStream(encryptedSecret))
                         {
-                            using (MemoryStream msDecrypt = new MemoryStream(encryptedSecret))
+                            using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, dec, CryptoStreamMode.Read))
                             {
-                                using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, dec, CryptoStreamMode.Read))
-                                {
-                                    csDecrypt.Read(secret, 0, secret.Length);
-                                }
+                                csDecrypt.Read(secret, 0, secret.Length);
                             }
                         }
                     }
                 }
-                catch (System.Security.Cryptography.CryptographicException)
-                {
-                    // Corrupt ciphertext (e.g. bad padding) — treat as wrong key / corrupt data
-                    SensitiveData.Clear(secret);
-                    return false;
-                }
-
-                using (SHA256 sha = SHA256.Create())
-                {
-                    secretHash = sha.ComputeHash(secret);
-                }
-
-                if (!FixedTimeEquals(secretHash, verification))
-                {
-                    SensitiveData.Clear(secret);
-                    return false;
-                }
-
-                return true;
             }
-            finally
+            catch (System.Security.Cryptography.CryptographicException)
             {
-                SensitiveData.Clear(key, secretHash);
+                // Corrupt ciphertext (e.g. bad padding) — treat as wrong key / corrupt data
+                Array.Clear(secret, 0, secret.Length);
+                return false;
             }
-        }
-        
-        private static void ClearTemporarySecretState(params byte[][] buffers)
-        {
-            SensitiveData.Clear(buffers);
-        }
 
+            byte[] secretHash;
+            using (SHA256 sha = SHA256.Create())
+            {
+                secretHash = sha.ComputeHash(secret);
+            }
+
+            if (!FixedTimeEquals(secretHash, verification))
+            {
+                Array.Clear(secret, 0, secret.Length);
+                return false;
+            }
+
+            return true;
+        }
+       
         private bool ReadEncryptedSecret(out byte[] encryptedSecret, out byte[] challenge, out byte[] iv, out byte[] verification)
         {
             encryptedSecret = null;
@@ -384,10 +350,9 @@ namespace KeeChallenge
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Diagnostics.TraceException("ReadEncryptedSecret failed for metadata path: " + mInfo.Path, ex);
-                MessageService.ShowWarning(MetadataReadErrorMessage);
+                MessageService.ShowWarning(String.Format("Error: file {0} could not be read correctly. Is the file corrupt? Reverting to recovery mode", mInfo.Path));
                 return false;
             }
             finally
@@ -409,7 +374,7 @@ namespace KeeChallenge
 
             if (!metadataValid)
             {
-                MessageService.ShowWarning(MetadataReadErrorMessage);
+                MessageService.ShowWarning(String.Format("Error: file {0} could not be read correctly. Is the file corrupt? Reverting to recovery mode", mInfo.Path));
                 return false;
             }
 
@@ -423,25 +388,15 @@ namespace KeeChallenge
             //get the secret
             KeyCreation creator = new KeyCreation(this);
 
-            if (creator.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-            {
-                SensitiveData.Clear(creator.Secret);
-                return null;
-            }
-
-            if (creator.Secret == null || creator.Secret.Length == 0)
-            {
-                return null;
-            }
+            if (creator.ShowDialog() != System.Windows.Forms.DialogResult.OK) return null;
 
             byte[] secret = new byte[creator.Secret.Length];
             
             Array.Copy(creator.Secret, secret, creator.Secret.Length); //probably paranoid here, but not a big performance hit
-            SensitiveData.Clear(creator.Secret);
+            Array.Clear(creator.Secret, 0, creator.Secret.Length);
 
             if (!EncryptAndSave(secret))
             {
-                SensitiveData.Clear(secret);
                 return null;
             }
 
@@ -458,62 +413,44 @@ namespace KeeChallenge
             byte[] challenge = null;
             byte[] verification = null;
             byte[] secret = null;
-            byte[] resp = null;
-            byte[] result = null;
 
-            try
+            if (!ReadEncryptedSecret(out encryptedSecret, out challenge, out iv, out verification))
             {
-                if (!ReadEncryptedSecret(out encryptedSecret, out challenge, out iv, out verification))
+                secret = RecoveryMode();
+                if (secret == null) return null;
+                if (!EncryptAndSave(secret)) return null;
+                return secret;
+            }
+                //show the dialog box prompting user to press yubikey button
+            byte[] resp = new byte[YubiWrapper.yubiRespLen];
+            KeyEntry entryForm = new KeyEntry(this, challenge);
+            
+            if (entryForm.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+            {
+                if (entryForm.RecoveryMode)
                 {
                     secret = RecoveryMode();
                     if (secret == null) return null;
                     if (!EncryptAndSave(secret)) return null;
-
-                    result = secret;
-                    secret = null;
-                    return result;
-                }
-                    //show the dialog box prompting user to press yubikey button
-                resp = new byte[YubiWrapper.yubiRespLen];
-                KeyEntry entryForm = new KeyEntry(this, challenge);
-                
-                if (entryForm.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-                {
-                    if (entryForm.RecoveryMode)
-                    {
-                        secret = RecoveryMode();
-                        if (secret == null) return null;
-                        if (!EncryptAndSave(secret)) return null;
-
-                        result = secret;
-                        secret = null;
-                        return result;
-                    }
-
-                    else return null;                
+                    return secret;
                 }
 
-                entryForm.Response.CopyTo(resp,0);
-                SensitiveData.Clear(entryForm.Response);
+                else return null;                
+            }               
 
-                if (DecryptSecret(encryptedSecret, resp, iv, verification, out secret))
-                {
-                    if (EncryptAndSave(secret))
-                    {
-                        result = secret;
-                        secret = null;
-                        return result;
-                    }
+            entryForm.Response.CopyTo(resp,0);
+            Array.Clear(entryForm.Response,0,entryForm.Response.Length);
 
-                    return null;
-                }
-
+            if (DecryptSecret(encryptedSecret, resp, iv, verification, out secret))
+            {
+                if (EncryptAndSave(secret))
+                    return secret;
+                else return null;
+            }
+            else
+            {
                 MessageService.ShowWarning("Incorrect response from YubiKey.");
                 return null;
-            }
-            finally
-            {
-                ClearTemporarySecretState(encryptedSecret, iv, challenge, verification, secret, resp);
             }
         }
 
@@ -521,21 +458,11 @@ namespace KeeChallenge
         {
             //prompt user to enter secret
             RecoveryMode recovery = new RecoveryMode(this);
-            if (recovery.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-            {
-                SensitiveData.Clear(recovery.Secret);
-                return null;
-            }
-
-            if (recovery.Secret == null || recovery.Secret.Length == 0)
-            {
-                return null;
-            }
-
+            if (recovery.ShowDialog() != System.Windows.Forms.DialogResult.OK) return null;
             byte[] secret = new byte[recovery.Secret.Length];
 
             recovery.Secret.CopyTo(secret, 0);
-            SensitiveData.Clear(recovery.Secret);            
+            Array.Clear(recovery.Secret, 0, recovery.Secret.Length);            
              
             return secret;
        }

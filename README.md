@@ -1,5 +1,7 @@
-﻿[KeeChallenge-Modern v2.0.7](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.5](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
+
+> **Notice (2026-05-18):** Releases **v2.0.6** and **v2.0.7** were withdrawn. Both fail to load silently in KeePass and are marked as pre-release on GitHub — **do not install them**. The current supported release is **v2.0.5**. The P1/P2 security hardening originally bundled into v2.0.6/v2.0.7 will be reintroduced in smaller, independently-validated increments.
 
 ## Fork Lineage
 - This repository is an independently maintained fork of the original KeeChallenge project.
@@ -8,14 +10,7 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
-v2.0.7
-* Critical plugin-load fix: the key provider is now registered before optional signed update-feed configuration runs, and the signing setup is wrapped in a guarded try/catch. Resolves a v2.0.6 regression where the unlock dialog showed "Failed to load the specified file ... \\Yubikey challenge-response" because the provider name was treated as a key file path when Initialize bailed out early.
-* Defensive resilience: signed update-feed configuration failures (including hosts whose KeePass version lacks the signing API used for pinning) no longer prevent the plugin from loading; the failure is traced via the diagnostics channel.
-
-v2.0.6
-* Security hardening completed: signed update-feed pinning (fail-closed when signing config is unavailable) and strict secret input validation with sanitized user-facing errors.
-* Reliability improvements: YubiKey cancel/retry and touch flow edge cases stabilized across x64/x86 validation matrix.
-* Validation closure: full P1/P2 manual gate completed (input validation, diagnostics/error surface, and update authenticity checks).
+v2.0.6 / v2.0.7 — **WITHDRAWN.** Both releases fail to load silently in KeePass (Plugins panel shows empty; unlock dialog treats the provider name as a key-file path). Master branch was rolled back to v2.0.5 on 2026-05-18. Do not use these releases.
 
 v2.0.5
 * P0 hardening completed: native DLL loading trust boundary strengthened with bundled-library integrity validation and safer directory loading APIs.
