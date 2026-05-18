@@ -41,6 +41,7 @@ namespace KeeChallenge
         private const long MaxMetadataFileBytes = 64 * 1024;
         private const long MaxMetadataXmlChars = 64 * 1024;
         private const int MaxEncryptedSecretBytes = 256;
+        private const string MetadataReadErrorMessage = "Error: metadata could not be read correctly. Reverting to Recovery Mode.";
         private bool m_LT64 = false;
 
         //If variable length challenges are enabled, a 63 byte challenge is sent instead.
@@ -102,7 +103,11 @@ namespace KeeChallenge
                 if (ctx.CreatingNewKey) return Create(ctx);
                 return Get(ctx);
             }
-            catch (Exception ex) { MessageService.ShowWarning(ex.Message); }
+            catch (Exception ex)
+            {
+                Diagnostics.TraceException("GetKey failed.", ex);
+                MessageService.ShowWarning("KeeChallenge could not complete key processing. Retry or use Recovery Mode if needed.");
+            }
 
             return null;
         }
@@ -233,9 +238,10 @@ namespace KeeChallenge
   
                 ft.CommitWrite();  
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageService.ShowWarning(String.Format("Error: unable to write to file {0}", mInfo.Path));
+                Diagnostics.TraceException("EncryptAndSave failed for metadata path: " + mInfo.Path, ex);
+                MessageService.ShowWarning("Error: unable to write KeeChallenge metadata.");
                 return false;
             }    
             finally
@@ -378,9 +384,10 @@ namespace KeeChallenge
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageService.ShowWarning(String.Format("Error: file {0} could not be read correctly. Is the file corrupt? Reverting to recovery mode", mInfo.Path));
+                Diagnostics.TraceException("ReadEncryptedSecret failed for metadata path: " + mInfo.Path, ex);
+                MessageService.ShowWarning(MetadataReadErrorMessage);
                 return false;
             }
             finally
@@ -402,7 +409,7 @@ namespace KeeChallenge
 
             if (!metadataValid)
             {
-                MessageService.ShowWarning(String.Format("Error: file {0} could not be read correctly. Is the file corrupt? Reverting to recovery mode", mInfo.Path));
+                MessageService.ShowWarning(MetadataReadErrorMessage);
                 return false;
             }
 
