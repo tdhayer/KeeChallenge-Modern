@@ -20,6 +20,7 @@ using System;
 using System.Windows.Forms;
 
 using KeePass.Plugins;
+using KeePassLib.Utility;
 
 namespace KeeChallenge
 {
@@ -32,10 +33,11 @@ namespace KeeChallenge
         private ToolStripMenuItem m_YubiSlot1 = null;
         private ToolStripMenuItem m_YubiSlot2 = null;
         private ToolStripSeparator m_Separator = null;
+        private bool m_updateFeedSigningConfigured = false;
 
         public override String UpdateUrl
         {
-            get { return "https://raw.githubusercontent.com/tdhayer/KeeChallenge-Modern/master/VERSION"; }
+            get { return m_updateFeedSigningConfigured ? UpdateFeedSecurity.UpdateFeedUrl : string.Empty; }
         }
 
         public IPluginHost Host
@@ -50,6 +52,16 @@ namespace KeeChallenge
             if (host == null) return false;
 
             m_host = host;
+
+            string updateFeedError;
+            m_updateFeedSigningConfigured = UpdateFeedSecurity.TryConfigure(out updateFeedError);
+            if (!m_updateFeedSigningConfigured)
+            {
+                MessageService.ShowWarning(
+                    "Signed update-feed verification could not be configured. " +
+                    "KeeChallenge automatic update checks are disabled until this is fixed." +
+                    Environment.NewLine + Environment.NewLine + updateFeedError);
+            }
             
             int slot = Properties.Settings.Default.YubikeySlot - 1;  //Important: for readability, the slot settings are not zero based. We must account for this during read/save
             YubiSlot yubiSlot = YubiSlot.SLOT2;
@@ -105,6 +117,7 @@ namespace KeeChallenge
 
                 m_prov = null;
                 m_host = null;
+                m_updateFeedSigningConfigured = false;
             }
         }
     }

@@ -70,6 +70,10 @@ namespace KeeChallenge
                     return;
                 }
             }
+            else
+            {
+                SensitiveData.Clear(Secret);
+            }
             GlobalWindowManager.RemoveWindow(this);
         }
     }

@@ -106,6 +106,17 @@ Output: `KeeChallenge/src/bin/Release/net48/KeeChallenge.dll`
 
 No manual reference editing required - the project resolves `KeePass.exe` via the repo-relative path above.
 
+### Update Feed Signing (Maintainers)
+
+The `VERSION` file is signed and validated by KeePass update checking via a pinned RSA public key.
+After updating any `VERSION` component line, re-sign the file before committing:
+
+```
+powershell -ExecutionPolicy Bypass -File tools/sign-version-feed.ps1 -PrivateKeyPath <path-to-private-key-xml>
+```
+
+Keep the private key outside the repository.
+
 ---
 
 ## Installation
