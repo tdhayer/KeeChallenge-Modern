@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("KeeChallenge")]
 [assembly: AssemblyDescription("YubiKey challenge-response key provider for KeePass 2.x")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Ben Rush")]
-[assembly: AssemblyProduct("KeePass Plugin")]
-[assembly: AssemblyCopyright("Copyright © 2014-2026 Ben Rush")]
+[assembly: AssemblyCompany("KeeChallenge-Modern Maintainers")]
+[assembly: AssemblyProduct("KeeChallenge KeePass Plugin")]
+[assembly: AssemblyCopyright("Copyright (C) 2014-2026 Ben Rush; fork maintenance (C) 2022-2026 Thomas Hayer")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
