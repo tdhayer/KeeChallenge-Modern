@@ -53,16 +53,6 @@ namespace KeeChallenge
 
             m_host = host;
 
-            string updateFeedError;
-            m_updateFeedSigningConfigured = UpdateFeedSecurity.TryConfigure(out updateFeedError);
-            if (!m_updateFeedSigningConfigured)
-            {
-                MessageService.ShowWarning(
-                    "Signed update-feed verification could not be configured. " +
-                    "KeeChallenge automatic update checks are disabled until this is fixed." +
-                    Environment.NewLine + Environment.NewLine + updateFeedError);
-            }
-            
             int slot = Properties.Settings.Default.YubikeySlot - 1;  //Important: for readability, the slot settings are not zero based. We must account for this during read/save
             YubiSlot yubiSlot = YubiSlot.SLOT2;
             if (Enum.IsDefined(typeof(YubiSlot),slot))
@@ -95,6 +85,28 @@ namespace KeeChallenge
             m_prov = new KeeChallengeProv();
             m_prov.YubikeySlot = yubiSlot;
             m_host.KeyProviderPool.Add(m_prov);
+
+            // Configure signed update-feed verification AFTER the key provider is registered.
+            // Any failure here (including missing KeePass APIs on older hosts) must never prevent
+            // the key provider from registering, otherwise unlock dialogs treat the provider
+            // name as a key file path.
+            try
+            {
+                string updateFeedError;
+                m_updateFeedSigningConfigured = UpdateFeedSecurity.TryConfigure(out updateFeedError);
+                if (!m_updateFeedSigningConfigured)
+                {
+                    MessageService.ShowWarning(
+                        "Signed update-feed verification could not be configured. " +
+                        "KeeChallenge automatic update checks are disabled until this is fixed." +
+                        Environment.NewLine + Environment.NewLine + updateFeedError);
+                }
+            }
+            catch (Exception ex)
+            {
+                m_updateFeedSigningConfigured = false;
+                Diagnostics.TraceException("Signed update-feed configuration threw during plugin Initialize.", ex);
+            }
 
             return true;
         }

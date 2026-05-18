@@ -1,4 +1,4 @@
-﻿[KeeChallenge-Modern v2.0.6](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.7](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
@@ -8,6 +8,10 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
+v2.0.7
+* Critical plugin-load fix: the key provider is now registered before optional signed update-feed configuration runs, and the signing setup is wrapped in a guarded try/catch. Resolves a v2.0.6 regression where the unlock dialog showed "Failed to load the specified file ... \\Yubikey challenge-response" because the provider name was treated as a key file path when Initialize bailed out early.
+* Defensive resilience: signed update-feed configuration failures (including hosts whose KeePass version lacks the signing API used for pinning) no longer prevent the plugin from loading; the failure is traced via the diagnostics channel.
+
 v2.0.6
 * Security hardening completed: signed update-feed pinning (fail-closed when signing config is unavailable) and strict secret input validation with sanitized user-facing errors.
 * Reliability improvements: YubiKey cancel/retry and touch flow edge cases stabilized across x64/x86 validation matrix.
