@@ -1,4 +1,4 @@
-﻿[KeeChallenge-Modern v2.0.5](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern v2.0.6](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
 ## Fork Lineage
@@ -8,6 +8,11 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
+v2.0.6
+* Security hardening completed: signed update-feed pinning (fail-closed when signing config is unavailable) and strict secret input validation with sanitized user-facing errors.
+* Reliability improvements: YubiKey cancel/retry and touch flow edge cases stabilized across x64/x86 validation matrix.
+* Validation closure: full P1/P2 manual gate completed (input validation, diagnostics/error surface, and update authenticity checks).
+
 v2.0.5
 * P0 hardening completed: native DLL loading trust boundary strengthened with bundled-library integrity validation and safer directory loading APIs.
 * Metadata parser hardening: explicit DTD prohibition, resolver disabled, document-size limits, and stricter encrypted payload validation.
