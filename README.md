@@ -3,7 +3,7 @@
 
 YubiKey challenge-response key provider for KeePass 2.x on Windows.
 
-Download published builds from [Releases](https://github.com/tdhayer/KeeChallenge-Modern/releases/latest). Version 2.0.9 is being prepared; see the [release notes](docs/releases/v2.0.9.md).
+Download published builds from [Releases](https://github.com/tdhayer/KeeChallenge-Modern/releases/latest). See the [2.0.9 release notes](docs/releases/v2.0.9.md) for the latest changes.
 
 ## Fork Lineage
 - This repository is an independently maintained fork of the original KeeChallenge project.
@@ -12,7 +12,7 @@ Download published builds from [Releases](https://github.com/tdhayer/KeeChalleng
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
-v2.0.9 (release candidate)
+v2.0.9
 * Signed update-feed verification using a pinned public key.
 * Stricter secret input validation, clearer error messages, and improved clearing of temporary sensitive buffers.
 * Improved cancellation and retry handling during YubiKey operations.

@@ -42,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 
 ## 1) Automated Gate (Pre-Merge)
 
-- [ ] Combined candidate GitHub checks are green (pending push).
+- [x] Combined candidate GitHub checks are green: CI, Dependency Review, and CodeQL passed for PR #24's implementation commits.
 - [x] Local build passes (Release and Debug):
 
 ```powershell
