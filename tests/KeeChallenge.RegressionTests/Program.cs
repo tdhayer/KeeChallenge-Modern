@@ -37,6 +37,7 @@ internal static class Program
         Run("Strict secret parsing and sanitized validation messages", TestSecretParsing);
         Run("Sensitive buffer clearing", TestSensitiveData);
         Run("Diagnostics retain context and nested exceptions", TestDiagnostics);
+        Run("Diagnostics tolerate failed trace and fallback sinks", TestDiagnosticFailures);
         Run("HMAC compatibility in both challenge modes", TestChallengeModes);
         Run("Decrypt success, wrong response, and corrupt ciphertext", TestDecryption);
         Run("Signed feed accepted; tampered and unsigned feeds rejected",
@@ -143,8 +144,55 @@ internal static class Program
                     text.Contains("Outer diagnostic") && text.Contains("Inner diagnostic"),
                     "Trace output lost context or nested exception details.");
             }
+
             finally
             {
+                Trace.Listeners.Remove(listener);
+            }
+        }
+    }
+
+    private sealed class FailingTraceListener : TraceListener
+    {
+        public override void Write(string message) { throw new IOException("Test trace sink failure"); }
+        public override void WriteLine(string message) { throw new IOException("Test trace sink failure"); }
+    }
+
+    private sealed class FailingTextWriter : TextWriter
+    {
+        public override Encoding Encoding { get { return Encoding.UTF8; } }
+        public override void WriteLine(string value) { throw new IOException("Test fallback sink failure"); }
+    }
+
+    private static void TestDiagnosticFailures()
+    {
+        Type diagnostics = PluginAssembly.GetType("KeeChallenge.Diagnostics", true);
+        PropertyInfo count = diagnostics.GetProperty("FailureCount", BindingFlags.Static | BindingFlags.NonPublic);
+        int before = (int)count.GetValue(null);
+        TextWriter original = Console.Error;
+        using (FailingTraceListener listener = new FailingTraceListener())
+        using (StringWriter fallback = new StringWriter())
+        {
+            Trace.Listeners.Add(listener);
+            try
+            {
+                Console.SetError(fallback);
+                Method("Diagnostics", "TraceException", typeof(string), typeof(Exception))
+                    .Invoke(null, new object[] { "Failure test", new Exception("Test exception") });
+                Require(fallback.ToString().Contains("Diagnostic output failed"),
+                    "Trace failure was not reported through the fallback.");
+                using (FailingTextWriter failedFallback = new FailingTextWriter())
+                {
+                    Console.SetError(failedFallback);
+                    Method("Diagnostics", "TraceException", typeof(string), typeof(Exception))
+                        .Invoke(null, new object[] { "Failure test", new Exception("Test exception") });
+                }
+                Require((int)count.GetValue(null) == before + 3,
+                    "Diagnostic sink failures were not accounted for.");
+            }
+            finally
+            {
+                Console.SetError(original);
                 Trace.Listeners.Remove(listener);
             }
         }

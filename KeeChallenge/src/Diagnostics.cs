@@ -18,18 +18,42 @@
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 
 namespace KeeChallenge
 {
     internal static class Diagnostics
     {
+        private static int failureCount;
+
+        internal static int FailureCount
+        {
+            get { return Volatile.Read(ref failureCount); }
+        }
+
         internal static void TraceException(string context, Exception ex)
         {
             if (string.IsNullOrEmpty(context)) context = "Unhandled plugin exception";
             if (ex == null) return;
 
-            Debug.WriteLine(string.Format("[KeeChallenge] {0}: {1}", context, ex));
-            Trace.WriteLine(string.Format("[KeeChallenge] {0}: {1}", context, ex));
+            try
+            {
+                Trace.WriteLine(string.Format("[KeeChallenge] {0}: {1}", context, ex));
+            }
+            catch (Exception traceError)
+            {
+                Interlocked.Increment(ref failureCount);
+                try
+                {
+                    Console.Error.WriteLine("[KeeChallenge] Diagnostic output failed ({0}).",
+                        traceError.GetType().Name);
+                }
+                catch (Exception)
+                {
+                    // Diagnostics must not interrupt key handling, even when both sinks fail.
+                    Interlocked.Increment(ref failureCount);
+                }
+            }
         }
     }
 }
