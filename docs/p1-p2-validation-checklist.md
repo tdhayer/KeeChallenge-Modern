@@ -5,28 +5,55 @@ This checklist defines the validation gate for:
 - P1: signed update-feed pinning + sensitive buffer zeroization hardening.
 - P2: strict secret input validation + sanitized user-facing error handling.
 
+## Restoration Status (2026-11-04)
+
+- The 2.0.6/2.0.7 regression was the changed assembly product, not the plugin's display name. Preserve `AssemblyProduct("KeePass Plugin")`, assembly name/title `KeeChallenge`, and the `KeeChallengeExt` entry point.
+- P1/P2 source changes have been restored locally from 2.0.7 without its assembly metadata or release-version changes.
+- Release/Debug builds and the Windows PowerShell reflective load probe passed against the bundled KeePass 2.61 reference.
+- `VERSION` was re-signed using the existing external signing key; its reported public-key fingerprint matches the pinned key.
+- Final versioned 2.0.9 regression runner passes with explicit `RESULT: PASS (0 failed)` in Debug/Release and actual x86/x64 processes, covering loader acceptance/rejection, signature positive/negative checks, parser hardening, and sensitive-data handling.
+- Dependabot workflow updates were applied and combined validation rerun.
+- Earlier architecture-labeled runs reused compiler intermediates and both executed as 32-bit. Rebuilding each target fixes this; the script now requires the expected process-bitness output and keeps the plugin architecture-neutral.
+- On 2026-11-04 the maintainer reported passing the complete KeePass 2.62 manual matrix in separate x86/x64 host runs, including mode-mismatch correction, missing-key cancellation, and all dialog cancellation paths. See [the manual release test](manual-release-test.md).
+- Assembly and signed feed metadata are aligned at 2.0.9. The maintainer reported the final candidate working in a fresh copy and with an existing database. Remote CI remains before publication.
+- The historical May results below and in the linked results document do not validate this restored worktree.
+
+For the step-by-step physical smoke test and hardware regression matrix, use [the manual release test](manual-release-test.md).
+
+This dependency-free .NET Framework runner rebuilds and executes both configurations and both process architectures. It checks the actual KeePass loader, including a deliberately renamed-product fixture, in addition to the pure-logic security regressions. It does not replace the visible Plugins-panel or physical-YubiKey tests.
+
+The existing reflection probe must run under Windows PowerShell, not PowerShell Core:
+
+```powershell
+powershell -NoProfile -File .\scripts\load-test.ps1 -PluginPath "$PWD\KeeChallenge\src\bin\Release\net48\KeeChallenge.dll" -KeePassPath "$PWD\KeeChallenge\lib\KeePass.exe"
+```
+
+Current automated run command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
+```
+
 ## Timing
 
-1. Pre-merge (stacked PR state): run while PR #10 and PR #11 are open.
-2. Pre-integration: run once again immediately before any merge action.
-3. Pre-release tag: run one final pass before tagging next release.
+1. Pre-integration: run against the combined candidate branch.
+2. Before tagging: confirm remote CI and final artifact smoke results.
+3. Before publication: inspect draft release assets, checksum, and notes.
 
 ## 1) Automated Gate (Pre-Merge)
 
-- [ ] PR checks are green:
-  - PR #10 (`feat/p1-signed-feed-pin-zeroize`)
-  - PR #11 (`feat/p2-input-validation-sanitized-errors`)
-- [ ] Local build passes (Release and Debug):
+- [ ] Combined candidate GitHub checks are green (pending push).
+- [x] Local build passes (Release and Debug):
 
 ```powershell
 dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release /nologo
 dotnet build KeeChallenge/src/KeeChallenge.csproj -c Debug /nologo
 ```
 
-- [ ] VERSION feed signing and verification passes:
+- [x] VERSION feed signing and verification passes:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\sign-version-feed.ps1 -PrivateKeyPath C:\Users\tdhay\KeeChallengeSecrets\update-feed-private-key.xml
+powershell -ExecutionPolicy Bypass -File .\tools\sign-version-feed.ps1 -PrivateKeyPath <path-to-private-key.xml>
 ```
 
 - [ ] Workspace scan shows no private key leakage patterns:
@@ -76,7 +103,7 @@ In both `KeyCreation` and `RecoveryMode` dialogs:
 
 P1+P2 are considered ready only when:
 
-- both PR CI suites are green,
+- the combined candidate CI checks are green,
 - Release and Debug builds pass,
 - manual architecture matrix passes,
 - malformed input cases are handled gracefully,

@@ -5,7 +5,9 @@ Use it as the single source of truth for what to do next.
 
 ## Current Status
 
-- P0/P1/P2 modernization work is complete.
+- P0 is released; P1/P2 are integrated into the 2.0.9 release candidate.
+- v2.0.8 is the supported release and preserves the required `AssemblyProduct("KeePass Plugin")` identity.
+- The final 2.0.9 automated matrix passes in x86/x64 Debug/Release. The maintainer reports the full KeePass 2.62 hardware matrix passed on both host architectures and the final candidate working in a fresh copy and with an existing database. Remaining gate: remote CI.
 - v2.0.5 has been tagged and pushed.
 - CI and release workflows are active.
 - Release assets now include SHA-256 checksums.
