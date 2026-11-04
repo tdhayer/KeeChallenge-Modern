@@ -1,7 +1,9 @@
-﻿[KeeChallenge-Modern v2.0.8](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
+﻿[KeeChallenge-Modern](https://github.com/tdhayer/KeeChallenge-Modern/ "KeeChallenge-Modern Documentation")
 =================
 
-> **Notice (2026-05-18):** Releases **v2.0.6** and **v2.0.7** were withdrawn. Both fail to load silently in KeePass and are marked as pre-release on GitHub — **do not install them**. The current supported release is **v2.0.8**. The P1/P2 security hardening originally bundled into v2.0.6/v2.0.7 will be reintroduced in smaller, independently-validated increments.
+YubiKey challenge-response key provider for KeePass 2.x on Windows.
+
+Download published builds from [Releases](https://github.com/tdhayer/KeeChallenge-Modern/releases/latest). See the [2.0.9 release notes](docs/releases/v2.0.9.md) for the latest changes.
 
 ## Fork Lineage
 - This repository is an independently maintained fork of the original KeeChallenge project.
@@ -10,12 +12,18 @@
 - This fork focuses on continuing maintenance, modernization, and release publishing when upstream releases are unavailable.
 
 ## Changes
-v2.0.8
-* Fork attribution metadata: `AssemblyCompany` set to `KeeChallenge-Modern Maintainers` and `AssemblyCopyright` updated to reflect both upstream author and fork maintainer. `AssemblyTitle` and `AssemblyProduct` are deliberately unchanged.
-* **Rule learned the hard way (root cause of v2.0.6/v2.0.7 silent rejection):** KeePass 2.61.x silently refuses to load any plugin whose `AssemblyProduct` is not exactly `"KeePass Plugin"`. Renaming it (even to `"KeeChallenge KeePass Plugin"`) drops the plugin from Tools→Plugins with no error or log entry. Bisect identified commit `3d32336` as the regression; `AssemblyProduct` is now locked.
-* Closes issue #12 (fork maintainer attribution).
+v2.0.9
+* Signed update-feed verification using a pinned public key.
+* Stricter secret input validation, clearer error messages, and improved clearing of temporary sensitive buffers.
+* Improved cancellation and retry handling during YubiKey operations.
+* Automated regression coverage for plugin loading, secret parsing, cryptography, and update authenticity.
+* Updated GitHub Actions dependencies. See [release notes](docs/releases/v2.0.9.md) for installation and validation details.
 
-v2.0.6 / v2.0.7 — **WITHDRAWN.** Both releases fail to load silently in KeePass (Plugins panel shows empty; unlock dialog treats the provider name as a key-file path). Master branch was rolled back to v2.0.5 on 2026-05-18. Root cause: assembly attribution commit renamed `AssemblyProduct` away from the literal `"KeePass Plugin"`. Do not use these releases.
+v2.0.8
+* Updated fork attribution while preserving KeePass plugin compatibility.
+
+v2.0.6 / v2.0.7
+* Superseded due to a plugin compatibility issue; use a current supported release.
 
 v2.0.5
 * P0 hardening completed: native DLL loading trust boundary strengthened with bundled-library integrity validation and safer directory loading APIs.
@@ -91,7 +99,7 @@ Linux/macOS support existed in earlier releases via Mono and a `KeeChallenge.dll
 
 ## Dependencies
 
-- **KeePass 2.x** - available as an installer or portable ZIP from https://keepass.info/download.html. Version 2.55 or later recommended; v2.0 was tested against KeePass 2.61.
+- **KeePass 2.x** - available as an installer or portable ZIP from https://keepass.info/download.html. Automated regression reference: 2.61. Maintainer-reported portable hardware testing: 2.62 on x86 and x64 hosts.
 - **Yubico native libraries** - the prebuilt `32bit/` and `64bit/` DLL bundles from https://opensource.yubico.com/yubikey-personalization/releases.html. The plugin ships with or alongside these folders.
 - **.NET Framework 4.8** - included in Windows 10 1903+ and Windows 11. Available from https://dotnet.microsoft.com/download/dotnet-framework/net48 for older systems.
 
@@ -114,6 +122,16 @@ dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release
 Output: `KeeChallenge/src/bin/Release/net48/KeeChallenge.dll`
 
 No manual reference editing required - the project resolves `KeePass.exe` via the repo-relative path above.
+
+### Validation
+
+Run the automated regression matrix from Windows PowerShell:
+
+```powershell
+powershell -NoProfile -File .\scripts\test.ps1
+```
+
+The runner rebuilds and verifies x86/x64 processes in Debug and Release. Physical YubiKey validation is covered by the [manual release test](docs/manual-release-test.md).
 
 ### Update Feed Signing (Maintainers)
 

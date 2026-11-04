@@ -6,6 +6,7 @@
     <RootNamespace>KeeChallenge</RootNamespace>
     <AssemblyName>KeeChallenge</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <PathMap>$(MSBuildProjectDirectory)=/_/KeeChallenge</PathMap>
   </PropertyGroup>
 
   <ItemGroup>

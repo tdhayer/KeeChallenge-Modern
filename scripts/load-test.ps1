@@ -13,7 +13,7 @@
 # Plugins panel) before tagging any release.
 #
 # Usage:
-#   pwsh -File scripts/load-test.ps1 -PluginPath <path to KeeChallenge.dll> [-KeePassPath <path to KeePass.exe>]
+# powershell -File scripts\load-test.ps1 -PluginPath <path to KeeChallenge.dll> [-KeePassPath <path to KeePass.exe>]
 #
 # Default KeePass path: C:\Program Files\KeePass Password Safe 2\KeePass.exe
 # Exit code: 0 on success, 1 on any failure.
@@ -28,6 +28,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $script:failures = @()
+
+if ($PSVersionTable.PSEdition -eq 'Core') {
+    throw 'Use Windows PowerShell (powershell.exe) for this .NET Framework 4.8 plugin probe.'
+}
 
 function Fail($msg) {
     Write-Host "FAIL: $msg" -ForegroundColor Red
@@ -48,6 +52,11 @@ Write-Host "  Size: $($file.Length) bytes"
 Write-Host "  Modified: $($file.LastWriteTime)"
 Write-Host "  FileVersion: $($file.VersionInfo.FileVersion)"
 Write-Host "  ProductVersion: $($file.VersionInfo.ProductVersion)"
+if ($file.VersionInfo.ProductName -cne 'KeePass Plugin') {
+    Fail 'AssemblyProduct must be exactly "KeePass Plugin"; KeePass silently filters other products.'
+} else {
+    Pass 'AssemblyProduct matches the KeePass loader requirement.'
+}
 
 Write-Host "`n=== MOTW / Zone.Identifier check ==="
 try {

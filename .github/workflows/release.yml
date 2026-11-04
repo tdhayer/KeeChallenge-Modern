@@ -14,15 +14,31 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2  # v5.3.0
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68  # v6.0.0
         with:
           dotnet-version: '8.x'   # SDK used to build net48 targets
 
       - name: Build
         run: dotnet build KeeChallenge/src/KeeChallenge.csproj -c Release /nologo /clp:ErrorsOnly
+
+      - name: Run regression matrix
+        shell: powershell
+        run: .\scripts\test.ps1
+
+      - name: Verify release metadata
+        shell: pwsh
+        run: |
+          $dll = "KeeChallenge\src\bin\Release\net48\KeeChallenge.dll"
+          $version = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $dll).Path).Version.ToString(3)
+          if ($env:GITHUB_REF_NAME -cne "v$version") {
+            throw "Release tag does not match assembly version $version."
+          }
+          if (-not (Test-Path "docs\releases\v$version.md")) {
+            throw "Release notes missing for $version."
+          }
 
       - name: Package artifacts
         shell: pwsh
@@ -33,6 +49,7 @@ jobs:
             "KeeChallenge/src/bin/Release/net48/KeeChallenge.dll",
             "KeeChallenge/lib/32bit",
             "KeeChallenge/lib/64bit",
+            "docs/releases/${version}.md",
             "LICENSE",
             "THIRD_PARTY_NOTICES.md",
             "THIRD_PARTY_LICENSES.md"
@@ -48,12 +65,14 @@ jobs:
           echo "CHECKSUM_FILE=$checksumFile" >> $env:GITHUB_ENV
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
         with:
           files: |
             ${{ env.ZIP_NAME }}
             ${{ env.CHECKSUM_FILE }}
           generate_release_notes: false
-          body_path: ''   # leave blank to paste notes manually, or point to a file
+          body_path: docs/releases/${{ github.ref_name }}.md
+          draft: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
